@@ -882,18 +882,6 @@ fn generics_of<'a, 'tcx>(tcx: TyCtxt<'a, 'tcx, 'tcx>,
         NodeExpr(&hir::Expr { node: hir::ExprClosure(..), .. }) => {
             Some(tcx.closure_base_def_id(def_id))
         }
-        NodeTy(&hir::Ty { node: hir::TyImplTrait(..), .. }) => {
-            let mut parent_id = node_id;
-            loop {
-                match tcx.hir.get(parent_id) {
-                    NodeItem(_) | NodeImplItem(_) | NodeTraitItem(_) => break,
-                    _ => {
-                        parent_id = tcx.hir.get_parent_node(parent_id);
-                    }
-                }
-            }
-            Some(tcx.hir.local_def_id(parent_id))
-        }
         _ => None
     };
 
@@ -901,6 +889,7 @@ fn generics_of<'a, 'tcx>(tcx: TyCtxt<'a, 'tcx, 'tcx>,
     let mut allow_defaults = false;
 
     let no_generics = hir::Generics::empty();
+    let generics_temporary;
     let ast_generics = match node {
         NodeTraitItem(item) => {
             match item.node {
@@ -958,6 +947,47 @@ fn generics_of<'a, 'tcx>(tcx: TyCtxt<'a, 'tcx, 'tcx>,
                 ForeignItemStatic(..) => &no_generics,
                 ForeignItemFn(_, _, ref generics) => generics
             }
+        }
+
+        NodeTy(&hir::Ty { node: hir::TyImplTrait(ref impl_trait_bounds), .. }) => {
+            let parent_generics = {
+                let mut parent_id = node_id;
+                loop {
+                    match tcx.hir.get(parent_id) {
+                        NodeItem(&Item { node: ItemFn(.., ref generics, _), .. }) => {
+                            break generics;
+                        },
+                        NodeImplItem(&ImplItem { node: ImplItemKind::Method(ref sig, _), .. }) |
+                        NodeTraitItem(&TraitItem { node: TraitItemKind::Method(ref sig, _), .. }) => {
+                            break &sig.generics;
+                        },
+                        _ => {
+                            parent_id = tcx.hir.get_parent_node(parent_id);
+                        }
+                    }
+                }
+            };
+
+            // For `impl Trait` types, we only include explicitly-specified lifetimes
+            let mut generics = vec![];
+            for lifetime_def in &parent_generics.lifetimes {
+                for impl_bound in impl_trait_bounds {
+                    if let &hir::TyParamBound::RegionTyParamBound(ref impl_lifetime) = impl_bound {
+                        if lifetime_def.lifetime.name == impl_lifetime.name {
+                            generics.push(lifetime_def.clone());
+                        }
+                    }
+                }
+            }
+
+            generics_temporary = hir::Generics {
+                lifetimes: generics.into(),
+                ty_params: parent_generics.ty_params.clone(),
+                where_clause: parent_generics.where_clause.clone(),
+                span: parent_generics.span, // This is almost definitely wrong now
+            };
+
+            &generics_temporary
         }
 
         _ => &no_generics
