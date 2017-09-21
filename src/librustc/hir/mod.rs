@@ -432,6 +432,9 @@ pub struct Crate {
     // slightly different results.
     pub items: BTreeMap<NodeId, Item>,
 
+    // Map of all existential types in the crate
+    pub exist_tys: BTreeMap<DefId, ExistTy>,
+
     pub trait_items: BTreeMap<TraitItemId, TraitItem>,
     pub impl_items: BTreeMap<ImplItemId, ImplItem>,
     pub bodies: BTreeMap<BodyId, Body>,
@@ -1315,6 +1318,15 @@ pub enum ImplItemKind {
     Type(P<Ty>),
 }
 
+#[derive(Clone, PartialEq, Eq, RustcEncodable, RustcDecodable, Hash, Debug)]
+pub struct ExistTy {
+    pub id: DefId,
+    pub parent_id: DefId,
+    pub lifetimes: HirVec<LifetimeDef>,
+    pub ty_params: HirVec<TyParam>,
+    pub bounds: TyParamBounds,
+}
+
 // Bind a type to an associated type: `A=Foo`.
 #[derive(Clone, PartialEq, Eq, RustcEncodable, RustcDecodable, Hash, Debug)]
 pub struct TypeBinding {
@@ -1383,9 +1395,8 @@ pub enum Ty_ {
     /// A trait object type `Bound1 + Bound2 + Bound3`
     /// where `Bound` is a trait or a lifetime.
     TyTraitObject(HirVec<PolyTraitRef>, Lifetime),
-    /// An `impl Bound1 + Bound2 + Bound3` type
-    /// where `Bound` is a trait or a lifetime.
-    TyImplTrait(TyParamBounds),
+    /// An existential type
+    TyExist(DefId, HirVec<Lifetime>, HirVec<Ty>),
     /// Unused for now
     TyTypeof(BodyId),
     /// TyInfer means the type should be inferred instead of it having been

@@ -90,6 +90,7 @@ pub struct LoweringContext<'a> {
     /// The items being lowered are collected here.
     items: BTreeMap<NodeId, hir::Item>,
 
+    exist_tys: BTreeMap<DefId, hir::ExistTy>,
     trait_items: BTreeMap<hir::TraitItemId, hir::TraitItem>,
     impl_items: BTreeMap<hir::ImplItemId, hir::ImplItem>,
     bodies: BTreeMap<hir::BodyId, hir::Body>,
@@ -109,6 +110,9 @@ pub struct LoweringContext<'a> {
     current_hir_id_owner: Vec<(DefIndex, u32)>,
     item_local_id_counters: NodeMap<u32>,
     node_id_to_hir_id: IndexVec<NodeId, hir::HirId>,
+
+    lifetimes: Vec<hir::LifetimeDef>,
+    ty_params: Vec<hir::TyParam>,
 }
 
 pub trait Resolver {
@@ -142,6 +146,7 @@ pub fn lower_crate(sess: &Session,
         resolver,
         name_map: FxHashMap(),
         items: BTreeMap::new(),
+        exist_tys: BTreeMap::new(),
         trait_items: BTreeMap::new(),
         impl_items: BTreeMap::new(),
         bodies: BTreeMap::new(),
@@ -156,6 +161,8 @@ pub fn lower_crate(sess: &Session,
         item_local_id_counters: NodeMap(),
         node_id_to_hir_id: IndexVec::new(),
         is_generator: false,
+        lifetimes: Vec::new(),
+        ty_params: Vec::new(),
     }.lower_crate(krate)
 }
 
@@ -279,6 +286,7 @@ impl<'a> LoweringContext<'a> {
             span: c.span,
             exported_macros: hir::HirVec::from(self.exported_macros),
             items: self.items,
+            exist_tys: self.exist_tys,
             trait_items: self.trait_items,
             impl_items: self.impl_items,
             bodies: self.bodies,
@@ -471,6 +479,25 @@ impl<'a> LoweringContext<'a> {
         let r = self.record_body(result, decl);
         self.is_generator = prev;
         return r
+    }
+
+    fn with_generics<T, F>(&mut self, generics: &Generics, f: F) -> T
+        where F: FnOnce(&mut LoweringContext, hir::Generics) -> T
+    {
+        let generics = self.lower_generics(generics);
+
+        let old_lt_len = self.lifetimes.len();
+        let old_ty_len = self.ty_params.len();
+
+        // TODO(cramertj) something more efficient here?
+        self.lifetimes.extend_from_slice(&generics.lifetimes);
+        self.ty_params.extend_from_slice(&generics.ty_params);
+        let result = f(self, generics);
+
+        self.lifetimes.truncate(old_lt_len);
+        self.ty_params.truncate(old_ty_len);
+
+        result
     }
 
     fn with_loop_scope<T, F>(&mut self, loop_id: NodeId, f: F) -> T
@@ -729,7 +756,37 @@ impl<'a> LoweringContext<'a> {
                 hir::TyTraitObject(bounds, lifetime_bound)
             }
             TyKind::ImplTrait(ref bounds) => {
-                hir::TyImplTrait(self.lower_bounds(bounds))
+                let def_id = self.resolver.definitions().local_def_id(t.id);
+
+                let bounds = self.lower_bounds(bounds);
+                self.exist_tys.insert(def_id, hir::ExistTy {
+                    id: def_id,
+                    parent_id: DefId::local(self.parent_def.unwrap()),
+                    lifetimes: self.lifetimes.clone().into(),
+                    ty_params: self.ty_params.clone().into(),
+                    bounds,
+                });
+
+                let lifetimes = self.lifetimes.iter().map(|ltdef| ltdef.lifetime.clone()).collect();
+
+                let id_span_name_s: Vec<_> = self.ty_params.iter()
+                                                  .map(|ty_param| (ty_param.id, ty_param.span, ty_param.name))
+                                                  .collect();
+                let types = id_span_name_s.into_iter().map(|(id, span, name)| {
+                    let node = hir::TyPath(hir::QPath::Resolved(None,
+                        P(hir::Path {
+                            def: self.expect_full_def(id),
+                            segments: hir_vec![hir::PathSegment {
+                                name: name,
+                                parameters: hir::PathParameters::none()
+                            }],
+                            span,
+                        })));
+
+                    hir::Ty { id, node, span }
+                }).collect();
+
+                hir::TyExist(def_id, lifetimes, types)
             }
             TyKind::Mac(_) => panic!("TyMac should have been expanded by now."),
         };
@@ -1444,12 +1501,13 @@ impl<'a> LoweringContext<'a> {
                         let body = this.lower_block(body, false);
                         this.expr_block(body, ThinVec::new())
                     });
-                    hir::ItemFn(this.lower_fn_decl(decl),
+                    this.with_generics(generics, |this, generics|
+                        hir::ItemFn(this.lower_fn_decl(decl),
                                               this.lower_unsafety(unsafety),
                                               this.lower_constness(constness),
                                               abi,
-                                              this.lower_generics(generics),
-                                              body_id)
+                                              generics,
+                                              body_id))
                 })
             }
             ItemKind::Mod(ref m) => hir::ItemMod(self.lower_mod(m)),
@@ -1503,21 +1561,23 @@ impl<'a> LoweringContext<'a> {
                     }
                 }
 
-                hir::ItemImpl(self.lower_unsafety(unsafety),
-                              self.lower_impl_polarity(polarity),
-                              self.lower_defaultness(defaultness, true /* [1] */),
-                              self.lower_generics(generics),
-                              ifce,
-                              self.lower_ty(ty),
-                              new_impl_items)
+                self.with_generics(generics, |this, generics|
+                    hir::ItemImpl(this.lower_unsafety(unsafety),
+                                  this.lower_impl_polarity(polarity),
+                                  this.lower_defaultness(defaultness, true /* [1] */),
+                                  generics,
+                                  ifce,
+                                  this.lower_ty(ty),
+                                  new_impl_items))
             }
             ItemKind::Trait(unsafety, ref generics, ref bounds, ref items) => {
                 let bounds = self.lower_bounds(bounds);
                 let items = items.iter().map(|item| self.lower_trait_item_ref(item)).collect();
-                hir::ItemTrait(self.lower_unsafety(unsafety),
-                               self.lower_generics(generics),
-                               bounds,
-                               items)
+                self.with_generics(generics, |this, generics|
+                    hir::ItemTrait(this.lower_unsafety(unsafety),
+                                   generics,
+                                   bounds,
+                                   items))
             }
             ItemKind::MacroDef(..) | ItemKind::Mac(..) => panic!("Shouldn't still be around"),
         }
@@ -1709,9 +1769,10 @@ impl<'a> LoweringContext<'a> {
                 attrs: this.lower_attrs(&i.attrs),
                 node: match i.node {
                     ForeignItemKind::Fn(ref fdec, ref generics) => {
-                        hir::ForeignItemFn(this.lower_fn_decl(fdec),
-                                           this.lower_fn_args_to_names(fdec),
-                                           this.lower_generics(generics))
+                        this.with_generics(generics, |this, generics|
+                            hir::ForeignItemFn(this.lower_fn_decl(fdec),
+                                               this.lower_fn_args_to_names(fdec),
+                                               generics))
                     }
                     ForeignItemKind::Static(ref t, m) => {
                         hir::ForeignItemStatic(this.lower_ty(t), m)
@@ -1724,13 +1785,14 @@ impl<'a> LoweringContext<'a> {
     }
 
     fn lower_method_sig(&mut self, sig: &MethodSig) -> hir::MethodSig {
-        hir::MethodSig {
-            generics: self.lower_generics(&sig.generics),
-            abi: sig.abi,
-            unsafety: self.lower_unsafety(sig.unsafety),
-            constness: self.lower_constness(sig.constness),
-            decl: self.lower_fn_decl(&sig.decl),
-        }
+        self.with_generics(&sig.generics, |this, generics|
+            hir::MethodSig {
+                generics,
+                abi: sig.abi,
+                unsafety: this.lower_unsafety(sig.unsafety),
+                constness: this.lower_constness(sig.constness),
+                decl: this.lower_fn_decl(&sig.decl),
+            })
     }
 
     fn lower_unsafety(&mut self, u: Unsafety) -> hir::Unsafety {
