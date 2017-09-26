@@ -306,7 +306,7 @@ pub fn check_safety_of_destructor_if_necessary<'a, 'gcx, 'tcx>(
 
                 // A projection that we couldn't resolve - it
                 // might have a destructor.
-                ty::TyProjection(..) | ty::TyAnon(..) => {
+                ty::TyProjection(..) | ty::TyExist(..) => {
                     rcx.type_must_outlive(origin(), ty, parent_scope);
                 }
 

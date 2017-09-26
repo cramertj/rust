@@ -313,7 +313,7 @@ impl<'a, 'gcx, 'tcx> TypeFolder<'gcx, 'tcx> for TypeFreshener<'a, 'gcx, 'tcx> {
             ty::TyTuple(..) |
             ty::TyProjection(..) |
             ty::TyParam(..) |
-            ty::TyAnon(..) => {
+            ty::TyExist(..) => {
                 t.super_fold_with(self)
             }
         }

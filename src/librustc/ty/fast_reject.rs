@@ -46,7 +46,7 @@ pub enum SimplifiedTypeGen<D>
     TraitSimplifiedType(D),
     ClosureSimplifiedType(D),
     GeneratorSimplifiedType(D),
-    AnonSimplifiedType(D),
+    ExistSimplifiedType(D),
     FunctionSimplifiedType(usize),
     ParameterSimplifiedType,
 }
@@ -110,8 +110,8 @@ pub fn simplify_type<'a, 'gcx, 'tcx>(tcx: TyCtxt<'a, 'gcx, 'tcx>,
                 None
             }
         }
-        ty::TyAnon(def_id, _) => {
-            Some(AnonSimplifiedType(def_id))
+        ty::TyExist(def_id, _) => {
+            Some(ExistSimplifiedType(def_id))
         }
         ty::TyInfer(_) | ty::TyError => None,
     }
@@ -137,7 +137,7 @@ impl<D: Copy + Debug + Ord + Eq + Hash> SimplifiedTypeGen<D> {
             TraitSimplifiedType(d) => TraitSimplifiedType(map(d)),
             ClosureSimplifiedType(d) => ClosureSimplifiedType(map(d)),
             GeneratorSimplifiedType(d) => GeneratorSimplifiedType(map(d)),
-            AnonSimplifiedType(d) => AnonSimplifiedType(map(d)),
+            ExistSimplifiedType(d) => ExistSimplifiedType(map(d)),
             FunctionSimplifiedType(n) => FunctionSimplifiedType(n),
             ParameterSimplifiedType => ParameterSimplifiedType,
         }
@@ -170,7 +170,7 @@ impl<'gcx, D> HashStable<StableHashingContext<'gcx>> for SimplifiedTypeGen<D>
             TraitSimplifiedType(d) => d.hash_stable(hcx, hasher),
             ClosureSimplifiedType(d) => d.hash_stable(hcx, hasher),
             GeneratorSimplifiedType(d) => d.hash_stable(hcx, hasher),
-            AnonSimplifiedType(d) => d.hash_stable(hcx, hasher),
+            ExistSimplifiedType(d) => d.hash_stable(hcx, hasher),
             FunctionSimplifiedType(n) => n.hash_stable(hcx, hasher),
         }
     }

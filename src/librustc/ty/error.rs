@@ -232,7 +232,7 @@ impl<'a, 'gcx, 'lcx, 'tcx> ty::TyS<'tcx> {
                     "type parameter".to_string()
                 }
             }
-            ty::TyAnon(..) => "anonymized type".to_string(),
+            ty::TyExist(..) => "existential type".to_string(),
             ty::TyError => "type error".to_string(),
         }
     }

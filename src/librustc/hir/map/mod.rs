@@ -374,6 +374,14 @@ impl<'hir> Map<'hir> {
         self.forest.krate()
     }
 
+    pub fn exist_ty(&self, id: DefId) -> &'hir ExistTy {
+        self.read(self.as_local_node_id(id).unwrap());
+
+        // NB: intentionally bypass `self.forest.krate()` so that we
+        // do not trigger a read of the whole krate here
+        self.forest.krate.exist_ty(id)
+    }
+
     pub fn trait_item(&self, id: TraitItemId) -> &'hir TraitItem {
         self.read(id.node_id);
 

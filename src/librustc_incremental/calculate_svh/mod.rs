@@ -200,6 +200,7 @@ impl<'a, 'tcx: 'a> ComputeItemHashesVisitor<'a, 'tcx> {
 
             // These fields are handled separately:
             exported_macros: _,
+            exist_tys: _,
             items: _,
             trait_items: _,
             impl_items: _,

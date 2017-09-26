@@ -1546,7 +1546,7 @@ impl<'a, 'tcx> TyCtxt<'a, 'tcx, 'tcx> {
         sty_debug_print!(
             self,
             TyAdt, TyArray, TySlice, TyRawPtr, TyRef, TyFnDef, TyFnPtr, TyGenerator,
-            TyDynamic, TyClosure, TyTuple, TyParam, TyInfer, TyProjection, TyAnon);
+            TyDynamic, TyClosure, TyTuple, TyParam, TyInfer, TyProjection, TyExist);
 
         println!("Substs interner: #{}", self.interners.substs.borrow().len());
         println!("Region interner: #{}", self.interners.region.borrow().len());
@@ -1953,8 +1953,8 @@ impl<'a, 'gcx, 'tcx> TyCtxt<'a, 'gcx, 'tcx> {
         self.mk_param(def.index, def.name)
     }
 
-    pub fn mk_anon(self, def_id: DefId, substs: &'tcx Substs<'tcx>) -> Ty<'tcx> {
-        self.mk_ty(TyAnon(def_id, substs))
+    pub fn mk_exist(self, def_id: DefId, substs: &'tcx Substs<'tcx>) -> Ty<'tcx> {
+        self.mk_ty(TyExist(def_id, substs))
     }
 
     pub fn intern_existential_predicates(self, eps: &[ExistentialPredicate<'tcx>])

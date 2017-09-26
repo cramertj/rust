@@ -355,7 +355,7 @@ pub fn characteristic_def_id_of_type(ty: Ty) -> Option<DefId> {
         ty::TyFnPtr(_) |
         ty::TyProjection(_) |
         ty::TyParam(_) |
-        ty::TyAnon(..) |
+        ty::TyExist(..) |
         ty::TyInfer(_) |
         ty::TyError |
         ty::TyNever |

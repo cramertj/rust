@@ -453,6 +453,10 @@ impl Crate {
         &self.items[&id]
     }
 
+    pub fn exist_ty(&self, id: DefId) -> &ExistTy {
+        &self.exist_tys[&id]
+    }
+
     pub fn trait_item(&self, id: TraitItemId) -> &TraitItem {
         &self.trait_items[&id]
     }

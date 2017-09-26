@@ -313,7 +313,7 @@ fn ty_is_local_constructor(ty: Ty, infer_is_local: InferIsLocal)-> bool {
             true
         }
 
-        ty::TyClosure(..) | ty::TyGenerator(..) | ty::TyAnon(..) => {
+        ty::TyClosure(..) | ty::TyGenerator(..) | ty::TyExist(..) => {
             bug!("ty_is_local invoked on unexpected type: {:?}", ty)
         }
     }

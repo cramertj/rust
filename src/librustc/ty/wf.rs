@@ -350,10 +350,10 @@ impl<'a, 'gcx, 'tcx> WfPredicates<'a, 'gcx, 'tcx> {
                     // types appearing in the fn signature
                 }
 
-                ty::TyAnon(..) => {
+                ty::TyExist(..) => {
                     // all of the requirements on type parameters
                     // should've been checked by the instantiation
-                    // of whatever returned this exact `impl Trait`.
+                    // of whatever returned this exact existential.
                 }
 
                 ty::TyDynamic(data, r) => {

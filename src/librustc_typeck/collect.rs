@@ -130,7 +130,7 @@ impl<'a, 'tcx> Visitor<'tcx> for CollectItemTypesVisitor<'a, 'tcx> {
     }
 
     fn visit_ty(&mut self, ty: &'tcx hir::Ty) {
-        if let hir::TyImplTrait(..) = ty.node {
+        if let hir::TyExist(..) = ty.node {
             let def_id = self.tcx.hir.local_def_id(ty.id);
             self.tcx.generics_of(def_id);
             self.tcx.predicates_of(def_id);
@@ -836,6 +836,64 @@ fn has_late_bound_regions<'a, 'tcx>(tcx: TyCtxt<'a, 'tcx, 'tcx>,
     }
 }
 
+fn generics_of_exist_ty<'a, 'tcx>(tcx: TyCtxt<'a, 'tcx, 'tcx>,
+                                  def_id: DefId,
+                                  node_id: ast::NodeId,
+                                  node: hir::map::Node<'tcx>)
+                                  -> &'tcx ty::Generics
+{
+    let exist_ty = tcx.hir.exist_ty(def_id);
+    let lt_defs = &exist_ty.lifetimes;
+    let ty_params = &exist_ty.ty_params;
+
+    let hir_id = tcx.hir.node_to_hir_id(node_id);
+    let object_lifetime_defaults = tcx.object_lifetime_defaults(hir_id);
+
+    let regions: Vec<_> = lt_defs.iter()
+        .filter(|lt_def| {
+            let hir_id = tcx.hir.node_to_hir_id(lt_def.lifetime.id);
+            !tcx.is_late_bound(hir_id)
+        })
+        .enumerate()
+        .map(|(i, lt_def)| {
+            ty::RegionParameterDef {
+                name: lt_def.lifetime.name,
+                index: i as u32,
+                def_id: tcx.hir.local_def_id(lt_def.lifetime.id),
+                pure_wrt_drop: lt_def.pure_wrt_drop,
+            }
+        })
+        .collect();
+
+    let type_start = regions.len() as u32;
+    let mut type_param_to_index = BTreeMap::new();
+    let types = ty_params.iter().enumerate().map(|(i, p)| {
+        let index = type_start + i as u32;
+        let def_id = tcx.hir.local_def_id(p.id);
+        type_param_to_index.insert(def_id.index, index);
+        ty::TypeParameterDef {
+            index: index,
+            name: p.name,
+            def_id: def_id,
+            has_default: p.default.is_some(),
+            object_lifetime_default:
+                object_lifetime_defaults.as_ref().map_or(rl::Set1::Empty, |o| o[i]),
+            pure_wrt_drop: p.pure_wrt_drop,
+        }
+    }).collect();
+
+    tcx.alloc_generics(ty::Generics {
+        parent: None,
+        parent_regions: 0,
+        parent_types: 0,
+        regions,
+        types,
+        type_param_to_index,
+        has_self: false,
+        has_late_bound_regions: has_late_bound_regions(tcx, node),
+    })
+}
+
 fn generics_of<'a, 'tcx>(tcx: TyCtxt<'a, 'tcx, 'tcx>,
                          def_id: DefId)
                          -> &'tcx ty::Generics {
@@ -857,17 +915,11 @@ fn generics_of<'a, 'tcx>(tcx: TyCtxt<'a, 'tcx, 'tcx>,
         NodeExpr(&hir::Expr { node: hir::ExprClosure(..), .. }) => {
             Some(tcx.closure_base_def_id(def_id))
         }
-        NodeTy(&hir::Ty { node: hir::TyImplTrait(..), .. }) => {
-            let mut parent_id = node_id;
-            loop {
-                match tcx.hir.get(parent_id) {
-                    NodeItem(_) | NodeImplItem(_) | NodeTraitItem(_) => break,
-                    _ => {
-                        parent_id = tcx.hir.get_parent_node(parent_id);
-                    }
-                }
-            }
-            Some(tcx.hir.local_def_id(parent_id))
+        NodeTy(&hir::Ty {
+            node: hir::TyExist(ref def_id, ref _applied_lifetimes, ref _applied_types),
+            ..
+        }) => {
+            return generics_of_exist_ty(tcx, def_id.clone(), node_id, node);
         }
         _ => None
     };
@@ -1163,10 +1215,10 @@ fn type_of<'a, 'tcx>(tcx: TyCtxt<'a, 'tcx, 'tcx>,
             icx.to_ty(ty)
         }
 
-        NodeTy(&hir::Ty { node: TyImplTrait(..), .. }) => {
-            let owner = tcx.hir.get_parent_did(node_id);
+        NodeTy(&hir::Ty { node: TyExist(ref def_id, ..), .. }) => {
+            let parent_id = &tcx.hir.exist_ty(def_id.clone()).parent_id;
             let hir_id = tcx.hir.node_to_hir_id(node_id);
-            tcx.typeck_tables_of(owner).node_id_to_type(hir_id)
+            tcx.typeck_tables_of(parent_id.clone()).node_id_to_type(hir_id)
         }
 
         x => {
@@ -1380,9 +1432,11 @@ fn predicates_of<'a, 'tcx>(tcx: TyCtxt<'a, 'tcx, 'tcx>,
             }
         }
 
-        NodeTy(&Ty { node: TyImplTrait(ref bounds), span, .. }) => {
-            let substs = Substs::identity_for_item(tcx, def_id);
-            let anon_ty = tcx.mk_anon(def_id, substs);
+        NodeTy(&Ty { node: TyExist(ref def_id, ref _lifetimes, ref _types), span, .. }) => {
+            let substs = Substs::identity_for_item(tcx, def_id.clone());
+            let anon_ty = tcx.mk_exist(def_id.clone(), substs);
+
+            let bounds = &tcx.hir.exist_ty(def_id.clone()).bounds;
 
             // Collect the bounds, i.e. the `A+B+'c` in `impl A+B+'c`.
             let bounds = compute_bounds(&icx, anon_ty, bounds,

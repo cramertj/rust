@@ -602,7 +602,7 @@ impl<'a, 'gcx, 'tcx> TyCtxt<'a, 'gcx, 'tcx> {
             }),
 
             // Types that can't be resolved. Pass them forward.
-            ty::TyProjection(..) | ty::TyAnon(..) | ty::TyParam(..) => {
+            ty::TyProjection(..) | ty::TyExist(..) | ty::TyParam(..) => {
                 Ok(ty::DtorckConstraint {
                     outlives: vec![],
                     dtorck_types: vec![ty],
@@ -711,7 +711,7 @@ impl<'a, 'gcx, 'tcx, W> TypeVisitor<'tcx> for TypeIdHasher<'a, 'gcx, 'tcx, W>
             TyRef(_, m) => self.hash(m.mutbl),
             TyClosure(def_id, _) |
             TyGenerator(def_id, _, _) |
-            TyAnon(def_id, _) |
+            TyExist(def_id, _) |
             TyFnDef(def_id, _) => self.def_id(def_id),
             TyAdt(d, _) => self.def_id(d.did),
             TyFnPtr(f) => {
@@ -1130,7 +1130,7 @@ fn needs_drop_raw<'a, 'tcx>(tcx: TyCtxt<'a, 'tcx, 'tcx>,
         // Can refer to a type which may drop.
         // FIXME(eddyb) check this against a ParamEnv.
         ty::TyDynamic(..) | ty::TyProjection(..) | ty::TyParam(_) |
-        ty::TyAnon(..) | ty::TyInfer(_) | ty::TyError => true,
+        ty::TyExist(..) | ty::TyInfer(_) | ty::TyError => true,
 
         // Structural recursion.
         ty::TyArray(ty, _) | ty::TySlice(ty) => needs_drop(ty),

@@ -1915,7 +1915,7 @@ impl<'a, 'gcx, 'tcx> FnCtxt<'a, 'gcx, 'tcx> {
     /// and record them for writeback.
     fn instantiate_anon_types<T: TypeFoldable<'tcx>>(&self, value: &T) -> T {
         value.fold_with(&mut BottomUpFolder { tcx: self.tcx, fldop: |ty| {
-            if let ty::TyAnon(def_id, substs) = ty.sty {
+            if let ty::TyExist(def_id, substs) = ty.sty {
                 // Use the same type variable if the exact same TyAnon appears more
                 // than once in the return type (e.g. if it's passed to a type alias).
                 let id = self.tcx.hir.as_local_node_id(def_id).unwrap();

@@ -111,7 +111,7 @@ fn push_subtypes<'tcx>(stack: &mut TypeWalkerStack<'tcx>, parent_ty: Ty<'tcx>) {
                 substs.types().rev().chain(opt_ty)
             }));
         }
-        ty::TyAdt(_, substs) | ty::TyAnon(_, substs) => {
+        ty::TyAdt(_, substs) | ty::TyExist(_, substs) => {
             stack.extend(substs.types().rev());
         }
         ty::TyClosure(_, ref substs) => {

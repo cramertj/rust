@@ -247,7 +247,7 @@ impl<'a, 'gcx, 'tcx> InferCtxt<'a, 'gcx, 'tcx> {
                 ty::TyTuple(..) => Some(10),
                 ty::TyProjection(..) => Some(11),
                 ty::TyParam(..) => Some(12),
-                ty::TyAnon(..) => Some(13),
+                ty::TyExist(..) => Some(13),
                 ty::TyNever => Some(14),
                 ty::TyAdt(adt, ..) => match adt.adt_kind() {
                     AdtKind::Struct => Some(15),

@@ -17,7 +17,7 @@ use ty::{BrAnon, BrEnv, BrFresh, BrNamed};
 use ty::{TyBool, TyChar, TyAdt};
 use ty::{TyError, TyStr, TyArray, TySlice, TyFloat, TyFnDef, TyFnPtr};
 use ty::{TyParam, TyRawPtr, TyRef, TyNever, TyTuple};
-use ty::{TyClosure, TyGenerator, TyProjection, TyAnon};
+use ty::{TyClosure, TyGenerator, TyProjection, TyExist};
 use ty::{TyDynamic, TyInt, TyUint, TyInfer};
 use ty::{self, Ty, TyCtxt, TypeFoldable};
 
@@ -791,7 +791,7 @@ impl<'tcx> fmt::Display for ty::TypeVariants<'tcx> {
                 }
             }
             TyProjection(ref data) => write!(f, "{}", data),
-            TyAnon(def_id, substs) => {
+            TyExist(def_id, substs) => {
                 ty::tls::with(|tcx| {
                     // Grab the "TraitA + TraitB" from `impl TraitA + TraitB`,
                     // by looking up the projections associated with the def_id.

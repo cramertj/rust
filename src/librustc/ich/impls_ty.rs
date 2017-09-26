@@ -624,7 +624,7 @@ for ty::TypeVariants<'gcx>
             TyProjection(ref projection_ty) => {
                 projection_ty.hash_stable(hcx, hasher);
             }
-            TyAnon(def_id, substs) => {
+            TyExist(def_id, substs) => {
                 def_id.hash_stable(hcx, hasher);
                 substs.hash_stable(hcx, hasher);
             }

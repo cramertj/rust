@@ -1388,7 +1388,7 @@ impl<'cx, 'gcx, 'tcx> SelectionContext<'cx, 'gcx, 'tcx> {
         // before we go into the whole skolemization thing, just
         // quickly check if the self-type is a projection at all.
         match obligation.predicate.0.trait_ref.self_ty().sty {
-            ty::TyProjection(_) | ty::TyAnon(..) => {}
+            ty::TyProjection(_) | ty::TyExist(..) => {}
             ty::TyInfer(ty::TyVar(_)) => {
                 span_bug!(obligation.cause.span,
                     "Self=_ should have been handled by assemble_candidates");
@@ -1424,7 +1424,7 @@ impl<'cx, 'gcx, 'tcx> SelectionContext<'cx, 'gcx, 'tcx> {
         let (def_id, substs) = match skol_trait_predicate.trait_ref.self_ty().sty {
             ty::TyProjection(ref data) =>
                 (data.trait_ref(self.tcx()).def_id, data.substs),
-            ty::TyAnon(def_id, substs) => (def_id, substs),
+            ty::TyExist(def_id, substs) => (def_id, substs),
             _ => {
                 span_bug!(
                     obligation.cause.span,
@@ -2038,7 +2038,7 @@ impl<'cx, 'gcx, 'tcx> SelectionContext<'cx, 'gcx, 'tcx> {
                 ))
             }
 
-            ty::TyProjection(_) | ty::TyParam(_) | ty::TyAnon(..) => None,
+            ty::TyProjection(_) | ty::TyParam(_) | ty::TyExist(..) => None,
             ty::TyInfer(ty::TyVar(_)) => Ambiguous,
 
             ty::TyInfer(ty::FreshTy(_))
@@ -2084,7 +2084,7 @@ impl<'cx, 'gcx, 'tcx> SelectionContext<'cx, 'gcx, 'tcx> {
                 Where(ty::Binder(tys.to_vec()))
             }
 
-            ty::TyAdt(..) | ty::TyProjection(..) | ty::TyParam(..) | ty::TyAnon(..) => {
+            ty::TyAdt(..) | ty::TyProjection(..) | ty::TyParam(..) | ty::TyExist(..) => {
                 // Fallback to whatever user-defined impls exist in this case.
                 None
             }
@@ -2186,7 +2186,7 @@ impl<'cx, 'gcx, 'tcx> SelectionContext<'cx, 'gcx, 'tcx> {
                     .collect()
             }
 
-            ty::TyAnon(def_id, substs) => {
+            ty::TyExist(def_id, substs) => {
                 // We can resolve the `impl Trait` to its concrete type,
                 // which enforces a DAG between the functions requiring
                 // the auto trait bounds in question.

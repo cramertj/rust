@@ -516,10 +516,12 @@ impl<'a, 'tcx> DefPathBasedNames<'a, 'tcx> {
             ty::TyError |
             ty::TyInfer(_) |
             ty::TyProjection(..) |
-            ty::TyParam(_) |
-            ty::TyAnon(..) => {
+            ty::TyParam(_) => {
                 bug!("DefPathBasedNames: Trying to create type name for \
                                          unexpected type: {:?}", t);
+            }
+            ty::TyExist(..) => {
+                bug!("DefPathBasedNames: Creation of type name for existentials is unimplemented");
             }
         }
     }

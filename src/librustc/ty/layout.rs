@@ -860,7 +860,7 @@ impl<'a, 'tcx> Struct {
                 }
             }
 
-            (_, &ty::TyProjection(_)) | (_, &ty::TyAnon(..)) => {
+            (_, &ty::TyProjection(_)) | (_, &ty::TyExist(..)) => {
                 let normalized = tcx.normalize_associated_type_in_env(&ty, param_env);
                 if ty == normalized {
                     return Ok(None);
@@ -1547,7 +1547,7 @@ impl<'a, 'tcx> Layout {
             }
 
             // Types with no meaningful known layout.
-            ty::TyProjection(_) | ty::TyAnon(..) => {
+            ty::TyProjection(_) | ty::TyExist(..) => {
                 let normalized = tcx.normalize_associated_type_in_env(&ty, param_env);
                 if ty == normalized {
                     return Err(LayoutError::Unknown(ty));
@@ -2085,7 +2085,7 @@ impl<'a, 'tcx> SizeSkeleton<'tcx> {
                 }
             }
 
-            ty::TyProjection(_) | ty::TyAnon(..) => {
+            ty::TyProjection(_) | ty::TyExist(..) => {
                 let normalized = tcx.normalize_associated_type_in_env(&ty, param_env);
                 if ty == normalized {
                     Err(err)
@@ -2291,7 +2291,7 @@ impl<'a, 'tcx> TyLayout<'tcx> {
                 def.variants[self.variant_index.unwrap_or(0)].fields[i].ty(tcx, substs)
             }
 
-            ty::TyProjection(_) | ty::TyAnon(..) | ty::TyParam(_) |
+            ty::TyProjection(_) | ty::TyExist(..) | ty::TyParam(_) |
             ty::TyInfer(_) | ty::TyError => {
                 bug!("TyLayout::field_type: unexpected type `{}`", self.ty)
             }

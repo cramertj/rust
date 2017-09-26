@@ -488,7 +488,7 @@ impl<'tcx> TyS<'tcx> {
 
     pub fn is_suggestable(&self) -> bool {
         match self.sty {
-            TypeVariants::TyAnon(..) |
+            TypeVariants::TyExist(..) |
             TypeVariants::TyFnDef(..) |
             TypeVariants::TyFnPtr(..) |
             TypeVariants::TyDynamic(..) |
@@ -1747,7 +1747,7 @@ impl<'a, 'gcx, 'tcx> AdtDef {
                     .collect()
             }
 
-            TyProjection(..) | TyAnon(..) => {
+            TyProjection(..) | TyExist(..) => {
                 // must calculate explicitly.
                 // FIXME: consider special-casing always-Sized projections
                 vec![ty]

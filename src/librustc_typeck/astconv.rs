@@ -1019,7 +1019,7 @@ impl<'o, 'gcx: 'tcx, 'tcx> AstConv<'gcx, 'tcx>+'o {
             hir::TyTraitObject(ref bounds, ref lifetime) => {
                 self.conv_object_ty_poly_trait_ref(ast_ty.span, bounds, lifetime)
             }
-            hir::TyImplTrait(_) => {
+            hir::TyExist(ref def_id, ref _lifetimes, ref _types) => {
                 // Figure out if we can allow an `impl Trait` here, by walking up
                 // to a `fn` or inherent `impl` method, going only through `Ty`
                 // or `TraitRef` nodes (as nothing else should be in types) and
@@ -1058,8 +1058,7 @@ impl<'o, 'gcx: 'tcx, 'tcx> AstConv<'gcx, 'tcx>+'o {
 
                 // Create the anonymized type.
                 if allow {
-                    let def_id = tcx.hir.local_def_id(ast_ty.id);
-                    tcx.mk_anon(def_id, Substs::identity_for_item(tcx, def_id))
+                    tcx.mk_exist(def_id.clone(), Substs::identity_for_item(tcx, def_id.clone()))
                 } else {
                     span_err!(tcx.sess, ast_ty.span, E0562,
                               "`impl Trait` not allowed outside of function \

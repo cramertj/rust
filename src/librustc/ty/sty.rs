@@ -153,11 +153,11 @@ pub enum TypeVariants<'tcx> {
     /// `<T as Trait<..>>::N`.
     TyProjection(ProjectionTy<'tcx>),
 
-    /// Anonymized (`impl Trait`) type found in a return type.
-    /// The DefId comes from the `impl Trait` ast::Ty node, and the
-    /// substitutions are for the generics of the function in question.
+    /// Existential type (return position `impl Trait` or `existential type`).
+    /// The DefId points to an `hir::ExistTy`.
+    /// Substitutions for the generics of the `hir::ExistTy` in question.
     /// After typeck, the concrete type can be found in the `types` map.
-    TyAnon(DefId, &'tcx Substs<'tcx>),
+    TyExist(DefId, &'tcx Substs<'tcx>),
 
     /// A type parameter; for example, `T` in `fn f<T>(x: T) {}
     TyParam(ParamTy),
@@ -1422,7 +1422,7 @@ impl<'a, 'gcx, 'tcx> TyS<'tcx> {
                 }
                 v
             }
-            TyAdt(_, substs) | TyAnon(_, substs) => {
+            TyAdt(_, substs) | TyExist(_, substs) => {
                 substs.regions().collect()
             }
             TyClosure(_, ref substs) | TyGenerator(_, ref substs, _) => {

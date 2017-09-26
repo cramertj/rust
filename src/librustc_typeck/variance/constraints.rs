@@ -341,7 +341,7 @@ impl<'a, 'tcx> ConstraintContext<'a, 'tcx> {
                 self.add_constraints_from_trait_ref(current, data.trait_ref(tcx), variance);
             }
 
-            ty::TyAnon(_, substs) => {
+            ty::TyExist(_, substs) => {
                 self.add_constraints_from_invariant_substs(current, substs, variance);
             }
 

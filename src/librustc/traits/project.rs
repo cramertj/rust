@@ -288,7 +288,7 @@ impl<'a, 'b, 'gcx, 'tcx> TypeFolder<'gcx, 'tcx> for AssociatedTypeNormalizer<'a,
 
         let ty = ty.super_fold_with(self);
         match ty.sty {
-            ty::TyAnon(def_id, substs) if !substs.has_escaping_regions() => { // (*)
+            ty::TyExist(def_id, substs) if !substs.has_escaping_regions() => { // (*)
                 // Only normalize `impl Trait` after type-checking, usually in trans.
                 match self.param_env.reveal {
                     Reveal::UserFacing => ty,
@@ -920,7 +920,7 @@ fn assemble_candidates_from_trait_def<'cx, 'gcx, 'tcx>(
         ty::TyProjection(ref data) => {
             (data.trait_ref(tcx).def_id, data.substs)
         }
-        ty::TyAnon(def_id, substs) => (def_id, substs),
+        ty::TyExist(def_id, substs) => (def_id, substs),
         ty::TyInfer(ty::TyVar(_)) => {
             // If the self-type is an inference variable, then it MAY wind up
             // being a projected type, so induce an ambiguity.

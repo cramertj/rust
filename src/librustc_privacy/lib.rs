@@ -371,7 +371,9 @@ impl<'a, 'tcx> Visitor<'tcx> for EmbargoVisitor<'a, 'tcx> {
     }
 
     fn visit_ty(&mut self, ty: &'tcx hir::Ty) {
-        if let hir::TyImplTrait(..) = ty.node {
+        if let hir::TyExist(ref _def_id, ref _lifetimes, ref _types) = ty.node {
+            // TODO(cramertj) check the applied lifetimes and types
+            // or check the bounds using self.tcx.hir().exist_ty(self.as_local_node_id(def_id))
             if self.get(ty.id).is_some() {
                 // Reach the (potentially private) type and the API being exposed.
                 self.reach(ty.id).ty().predicates();
@@ -448,7 +450,7 @@ impl<'b, 'a, 'tcx> TypeVisitor<'tcx> for ReachEverythingInTheInterfaceVisitor<'b
             ty::TyFnDef(def_id, ..) |
             ty::TyClosure(def_id, ..) |
             ty::TyGenerator(def_id, ..) |
-            ty::TyAnon(def_id, _) => Some(def_id),
+            ty::TyExist(def_id, _) => Some(def_id),
             _ => None
         };
 
@@ -929,7 +931,9 @@ impl<'a, 'tcx> TypeVisitor<'tcx> for TypePrivacyVisitor<'a, 'tcx> {
                     return true;
                 }
             }
-            ty::TyAnon(def_id, ..) => {
+            ty::TyExist(def_id, ..) => {
+                // TODO(cramertj): when `existential type` is implemented,
+                // check privacy of ExistTy to which this def_id refers
                 for predicate in &self.tcx.predicates_of(def_id).predicates {
                     let trait_ref = match *predicate {
                         ty::Predicate::Trait(ref poly_trait_predicate) => {
@@ -951,7 +955,7 @@ impl<'a, 'tcx> TypeVisitor<'tcx> for TypePrivacyVisitor<'a, 'tcx> {
                             self.tcx.sess.span_err(self.span, &msg);
                             return true;
                         }
-                        // `Self` here is the same `TyAnon`, so skip it to avoid infinite recursion
+                        // `Self` here is the same `TyExist`, so skip it to avoid infinite recursion
                         for subst in trait_ref.substs.iter().skip(1) {
                             if subst.visit_with(self) {
                                 return true;
@@ -1618,7 +1622,9 @@ impl<'a, 'tcx> Visitor<'tcx> for PrivateItemsInPublicInterfacesVisitor<'a, 'tcx>
     }
 
     fn visit_ty(&mut self, ty: &'tcx hir::Ty) {
-        if let hir::TyImplTrait(..) = ty.node {
+        if let hir::TyExist(ref _def_id, ref _lifetimes, ref _types) = ty.node {
+            // TODO(cramertj) confirm that this still works
+
             // Check the traits being exposed, as they're separate,
             // e.g. `impl Iterator<Item=T>` has two predicates,
             // `X: Iterator` and `<X as Iterator>::Item == T`,
