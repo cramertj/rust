@@ -42,8 +42,8 @@
 
 use dep_graph::DepGraph;
 use hir;
-use hir::map::{Definitions, DefKey};
-use hir::def_id::{DefIndex, DefId, CRATE_DEF_INDEX};
+use hir::map::{Definitions, DefKey, DefPathData};
+use hir::def_id::{DefIndex, DefId, CRATE_DEF_INDEX, DefIndexAddressSpace};
 use hir::def::{Def, PathResolution};
 use lint::builtin::PARENTHESIZED_PARAMS_IN_TYPES_AND_MODULES;
 use middle::cstore::CrateStore;
@@ -52,7 +52,7 @@ use session::Session;
 use util::common::FN_OUTPUT_NAME;
 use util::nodemap::{DefIdMap, FxHashMap, NodeMap};
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::fmt::Debug;
 use std::iter;
 use std::mem;
@@ -726,7 +726,82 @@ impl<'a> LoweringContext<'a> {
                 hir::TyTraitObject(bounds, lifetime_bound)
             }
             TyKind::ImplTrait(ref bounds) => {
-                hir::TyImplTrait(self.lower_bounds(bounds))
+                struct ImplTraitLifetimeCollector<'a: 'r, 'r> {
+                    context: &'r mut LoweringContext<'a>,
+                    parent: DefIndex,
+                    currently_bound_lifetimes: Vec<Name>,
+                    already_defined_lifetimes: HashSet<Name>,
+                    resulting_lifetime_defs: Vec<hir::LifetimeDef>,
+                }
+
+                impl<'a: 'r, 'r, 'ast> Visitor<'ast> for ImplTraitLifetimeCollector<'a, 'r> {
+                    fn visit_poly_trait_ref(&mut self,
+                                            poly_trait_ref: &'ast PolyTraitRef,
+                                            _: &'ast TraitBoundModifier)
+                    {
+                        let old_len = self.currently_bound_lifetimes.len();
+
+                        // Record the introduction of `'a` in `for<'a> ...`
+                        self.currently_bound_lifetimes
+                            .extend(poly_trait_ref.bound_lifetimes.iter()
+                                        .map(|lt| lt.lifetime.ident.name));
+
+                        visit::walk_trait_ref(self, &poly_trait_ref.trait_ref);
+
+                        self.currently_bound_lifetimes.truncate(old_len);
+                    }
+
+                    fn visit_lifetime(&mut self, lifetime: &'ast Lifetime) {
+                        if !self.currently_bound_lifetimes.contains(&lifetime.ident.name) &&
+                            !self.already_defined_lifetimes.contains(&lifetime.ident.name)
+                        {
+                            self.already_defined_lifetimes.insert(lifetime.ident.name);
+
+                            let def_node_id = self.context.next_id();
+                            self.context.resolver.definitions().create_def_with_parent(
+                                self.parent,
+                                def_node_id.node_id,
+                                DefPathData::LifetimeDef(lifetime.ident.name.as_str()),
+                                DefIndexAddressSpace::High, // TODO(cramertj) ???
+                                Mark::root()
+                            );
+
+                            let new_lifetime = Lifetime {
+                                id: def_node_id.node_id,
+                                span: lifetime.span, // TODO(cramertj) this should probably point to the resolved def
+                                ident: lifetime.ident,
+                            };
+
+                            let lt_def = LifetimeDef {
+                                attrs: Vec::new().into(), // TODO(cramertj) resolve to def
+                                lifetime: new_lifetime,
+                                bounds: Vec::new(), // TODO(cramertj) resolve to def
+                            };
+
+                            self.resulting_lifetime_defs.push(
+                                self.context.lower_lifetime_def(&lt_def));
+                        }
+                    }
+                }
+
+                let impl_trait_defindex = self.resolver.definitions().opt_def_index(t.id).unwrap();
+                let resulting_defs = {
+                    let mut lifetime_collector = ImplTraitLifetimeCollector {
+                        context: self,
+                        parent: impl_trait_defindex,
+                        currently_bound_lifetimes: Vec::new(),
+                        already_defined_lifetimes: HashSet::new(),
+                        resulting_lifetime_defs: Vec::new()
+                    };
+
+                    for bound in bounds {
+                        visit::walk_ty_param_bound(&mut lifetime_collector, bound);
+                    }
+
+                    lifetime_collector.resulting_lifetime_defs
+                };
+
+                hir::TyImplTrait(self.lower_bounds(bounds), resulting_defs.into())
             }
             TyKind::Mac(_) => panic!("TyMac should have been expanded by now."),
         };

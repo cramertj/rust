@@ -849,6 +849,7 @@ fn generics_of<'a, 'tcx>(tcx: TyCtxt<'a, 'tcx, 'tcx>,
     let node_id = tcx.hir.as_local_node_id(def_id).unwrap();
 
     let node = tcx.hir.get(node_id);
+    let mut impl_trait_extra_lifetimes = Vec::new();
     let parent_def_id = match node {
         NodeImplItem(_) |
         NodeTraitItem(_) |
@@ -861,7 +862,8 @@ fn generics_of<'a, 'tcx>(tcx: TyCtxt<'a, 'tcx, 'tcx>,
         NodeExpr(&hir::Expr { node: hir::ExprClosure(..), .. }) => {
             Some(tcx.closure_base_def_id(def_id))
         }
-        NodeTy(&hir::Ty { node: hir::TyImplTrait(..), .. }) => {
+        NodeTy(&hir::Ty { node: hir::TyImplTrait(ref _bounds, ref lifetimes), .. }) => {
+            impl_trait_extra_lifetimes.extend_from_slice(lifetimes);
             let mut parent_id = node_id;
             loop {
                 match tcx.hir.get(parent_id) {
@@ -956,7 +958,9 @@ fn generics_of<'a, 'tcx>(tcx: TyCtxt<'a, 'tcx, 'tcx>,
     });
 
     let early_lifetimes = early_bound_lifetimes_from_generics(tcx, ast_generics);
-    let regions = early_lifetimes.enumerate().map(|(i, l)| {
+    let regions = early_lifetimes
+        .chain(impl_trait_extra_lifetimes.iter())
+        .enumerate().map(|(i, l)| {
         ty::RegionParameterDef {
             name: l.lifetime.name.name(),
             index: own_start + i as u32,
@@ -1393,7 +1397,7 @@ fn explicit_predicates_of<'a, 'tcx>(tcx: TyCtxt<'a, 'tcx, 'tcx>,
             }
         }
 
-        NodeTy(&Ty { node: TyImplTrait(ref bounds), span, .. }) => {
+        NodeTy(&Ty { node: TyImplTrait(ref bounds, ref _lifetimes), span, .. }) => {
             let substs = Substs::identity_for_item(tcx, def_id);
             let anon_ty = tcx.mk_anon(def_id, substs);
 

@@ -1032,7 +1032,7 @@ impl<'o, 'gcx: 'tcx, 'tcx> AstConv<'gcx, 'tcx>+'o {
             hir::TyTraitObject(ref bounds, ref lifetime) => {
                 self.conv_object_ty_poly_trait_ref(ast_ty.span, bounds, lifetime)
             }
-            hir::TyImplTrait(_) => {
+            hir::TyImplTrait(_, ref _lifetimes) => {
                 // Figure out if we can allow an `impl Trait` here, by walking up
                 // to a `fn` or inherent `impl` method, going only through `Ty`
                 // or `TraitRef` nodes (as nothing else should be in types) and

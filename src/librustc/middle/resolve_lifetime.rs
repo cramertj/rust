@@ -1691,7 +1691,7 @@ fn insert_late_bound_lifetimes(map: &mut NamedRegionMap,
         }
 
         fn visit_ty(&mut self, ty: &hir::Ty) {
-            if let hir::TyImplTrait(_) = ty.node {
+            if let hir::TyImplTrait(_, _) = ty.node {
                 self.impl_trait = true;
             }
             intravisit::walk_ty(self, ty);

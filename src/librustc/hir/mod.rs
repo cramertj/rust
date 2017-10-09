@@ -1449,7 +1449,10 @@ pub enum Ty_ {
     TyTraitObject(HirVec<PolyTraitRef>, Lifetime),
     /// An `impl Bound1 + Bound2 + Bound3` type
     /// where `Bound` is a trait or a lifetime.
-    TyImplTrait(TyParamBounds),
+    /// This node includes a list of all of the lifetimes that appear in the `impl Trait` bounds,
+    /// except for late-bound lifetimes that are created within the `impl Trait` bounds, such as
+    /// `'a` in `impl for<'a> Fn(&'a i32)`.
+    TyImplTrait(TyParamBounds, HirVec<LifetimeDef>),
     /// Unused for now
     TyTypeof(BodyId),
     /// TyInfer means the type should be inferred instead of it having been
