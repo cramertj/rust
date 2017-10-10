@@ -595,14 +595,18 @@ impl<'a> LoweringContext<'a> {
     }
 
     fn lower_attr(&mut self, attr: &Attribute) -> Attribute {
-        Attribute {
+        let tokens = self.lower_token_stream(attr.tokens.clone());
+
+        let attribute = Attribute {
             id: attr.id,
             style: attr.style,
             path: attr.path.clone(),
-            tokens: self.lower_token_stream(attr.tokens.clone()),
+            tokens: tokens,
             is_sugared_doc: attr.is_sugared_doc,
             span: attr.span,
-        }
+        };
+
+        attribute
     }
 
     fn lower_token_stream(&mut self, tokens: TokenStream) -> TokenStream {

@@ -56,6 +56,7 @@ use syntax::ast::{FnDecl, ForeignItem, ForeignItemKind, Generics};
 use syntax::ast::{Item, ItemKind, ImplItem, ImplItemKind};
 use syntax::ast::{Local, Mutability, Pat, PatKind, Path};
 use syntax::ast::{QSelf, TraitItemKind, TraitRef, Ty, TyKind};
+use syntax::ast::{Attribute, LitKind, MetaItemKind, NestedMetaItem, PathSegment};
 use syntax::feature_gate::{feature_err, emit_feature_err, GateIssue};
 
 use syntax_pos::{Span, DUMMY_SP, MultiSpan};
@@ -1289,6 +1290,9 @@ pub struct Resolver<'a> {
     pub whitelisted_legacy_custom_derives: Vec<Name>,
     pub found_unresolved_macro: bool,
 
+    // `matches` attribute resolutions
+    pub id_to_matches_resolutions: DefIdMap<Vec<(Name, DefId)>>,
+
     // List of crate local macros that we need to warn about as being unused.
     // Right now this only includes macro_rules! macros, and macros 2.0.
     unused_macros: FxHashSet<DefId>,
@@ -1509,6 +1513,7 @@ impl<'a> Resolver<'a> {
             potentially_unused_imports: Vec::new(),
             struct_constructors: DefIdMap(),
             found_unresolved_macro: false,
+            id_to_matches_resolutions: FxHashMap(),
             unused_macros: FxHashSet(),
             current_type_ascription: Vec::new(),
         }
@@ -1829,6 +1834,7 @@ impl<'a> Resolver<'a> {
 
         debug!("(resolving item) resolving {}", name);
 
+        self.resolve_matches_attrs(item.id, &item.attrs);
         self.check_proc_macro_attrs(&item.attrs);
 
         match item.node {
@@ -3691,6 +3697,79 @@ impl<'a> Resolver<'a> {
         let (id, span) = (directive.id, directive.span);
         let msg = "`self` no longer imports values";
         self.session.buffer_lint(lint::builtin::LEGACY_IMPORTS, id, span, msg);
+    }
+
+    fn resolve_matches_attrs(&mut self, node_id: NodeId, attrs: &[Attribute]) {
+        let mut matches = Vec::new();
+        for attr in attrs {
+            self.resolve_matches(
+                node_id, &mut matches, attr.meta_item_list().as_ref().map(|x| x.as_ref()));
+        }
+        let def_id = self.definitions.local_def_id(node_id);
+        self.id_to_matches_resolutions.insert(def_id, matches);
+    }
+
+    fn resolve_matches(&mut self,
+                       node_id: NodeId,
+                       matches: &mut Vec<(Name, DefId)>,
+                       meta_item_list: Option<&[NestedMetaItem]>)
+    {
+        for item in meta_item_list.into_iter().flat_map(|x| x) {
+            // Run recursively
+            self.resolve_matches(node_id, matches, item.meta_item_list());
+
+            // Check for "matches"
+            if item.check_name("matches") {
+                for nested_item in item.meta_item_list().into_iter().flat_map(|x| x) {
+                    if let Some(meta_item) = nested_item.meta_item() {
+                        let (to_resolve, path_source, path_span) = match meta_item.node {
+                            MetaItemKind::Word => {
+                                // This is a trait path like
+                                // matches("IsNoneError", Self="T")
+                                //          ^^^^^^^^^^^
+                                (meta_item.name, PathSource::Trait, meta_item.span)
+                            }
+                            MetaItemKind::NameValue(ref lit) => {
+                                if let LitKind::Str(symbol, _) =  lit.node {
+                                    if meta_item.name == "Self" {
+                                        // This is a self type specification like
+                                        // matches("IsNoneError", Self="T")
+                                        //                        ^^^^^^^^
+                                        (symbol, PathSource::Type, lit.span)
+                                    } else {
+                                        continue;
+                                    }
+                                } else {
+                                    continue
+                                }
+                            }
+                            MetaItemKind::List(_) => continue,
+                        };
+
+                        // TODO(cramertj) this will only work for single-part paths such as
+                        // `T` or `IsNoneError`-- it won't work for `::mymod::IsNoneError`
+                        // or `IsNoneError<T>`-- I'm not sure how best to handle this.
+                        // If this is important to support, we would need to do full pre-parsing
+                        // of the tokens into paths.
+                        let resolution = self.smart_resolve_path(
+                            node_id,
+                            None,
+                            &Path {
+                                span: path_span,
+                                segments: vec![PathSegment {
+                                    identifier: to_resolve.to_ident(),
+                                    span: path_span,
+                                    parameters: None,
+                                }],
+                            },
+                            path_source
+                        );
+
+                        matches.push((to_resolve, resolution.base_def().def_id()));
+                    }
+                }
+            }
+        }
     }
 
     fn check_proc_macro_attrs(&mut self, attrs: &[ast::Attribute]) {
