@@ -752,7 +752,11 @@ impl<'a> LoweringContext<'a> {
                     }
 
                     fn visit_lifetime(&mut self, lifetime: &'ast Lifetime) {
-                        if !self.currently_bound_lifetimes.contains(&lifetime.ident.name) &&
+                        // TODO(cramertj) clean this up
+                        if
+                            lifetime.ident.name != "'static" &&
+                            lifetime.ident.name != "'_" &&
+                            !self.currently_bound_lifetimes.contains(&lifetime.ident.name) &&
                             !self.already_defined_lifetimes.contains(&lifetime.ident.name)
                         {
                             self.already_defined_lifetimes.insert(lifetime.ident.name);
@@ -762,20 +766,28 @@ impl<'a> LoweringContext<'a> {
                                 self.parent,
                                 def_node_id.node_id,
                                 DefPathData::LifetimeDef(lifetime.ident.name.as_str()),
-                                DefIndexAddressSpace::High, // TODO(cramertj) ???
+                                DefIndexAddressSpace::High,
                                 Mark::root()
                             );
 
+                            // TODO(cramertj)
+                            // These all seem like they should point back at the appropriate lifetime
+                            // def. However, lifetime resolution resolves lifetimes to _regions_,
+                            // not defs. In order to make this work, we'd have to do something like
+                            // recording the defs currently in scope and matching them up, basically
+                            // replicating the resolution process manually. This seems like a bad idea.
+                            // Instead, we could try and ignore them for the time being and then match
+                            // them up at a later stage. ?
                             let new_lifetime = Lifetime {
                                 id: def_node_id.node_id,
-                                span: lifetime.span, // TODO(cramertj) this should probably point to the resolved def
+                                span: lifetime.span, // TODO(cramertj) point to the resolved def?
                                 ident: lifetime.ident,
                             };
 
                             let lt_def = LifetimeDef {
-                                attrs: Vec::new().into(), // TODO(cramertj) resolve to def
+                                attrs: Vec::new().into(), // TODO(cramertj) take value from resolved def?
                                 lifetime: new_lifetime,
-                                bounds: Vec::new(), // TODO(cramertj) resolve to def
+                                bounds: Vec::new(), // TODO(cramertj) ditto
                             };
 
                             self.resulting_lifetime_defs.push(

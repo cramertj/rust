@@ -20,7 +20,7 @@ use hir::def_id::DefId;
 use middle::resolve_lifetime as rl;
 use rustc::ty::subst::{Kind, Subst, Substs};
 use rustc::traits;
-use rustc::ty::{self, Ty, TyCtxt, ToPredicate, TypeFoldable};
+use rustc::ty::{self, RegionKind, Ty, TyCtxt, ToPredicate, TypeFoldable};
 use rustc::ty::wf::object_region_bounds;
 use rustc_back::slice;
 use require_c_abi_if_variadic;
@@ -1032,7 +1032,7 @@ impl<'o, 'gcx: 'tcx, 'tcx> AstConv<'gcx, 'tcx>+'o {
             hir::TyTraitObject(ref bounds, ref lifetime) => {
                 self.conv_object_ty_poly_trait_ref(ast_ty.span, bounds, lifetime)
             }
-            hir::TyImplTrait(_, ref _lifetimes) => {
+            hir::TyImplTrait(_, ref lifetimes) => {
                 // Figure out if we can allow an `impl Trait` here, by walking up
                 // to a `fn` or inherent `impl` method, going only through `Ty`
                 // or `TraitRef` nodes (as nothing else should be in types) and
@@ -1072,7 +1072,28 @@ impl<'o, 'gcx: 'tcx, 'tcx> AstConv<'gcx, 'tcx>+'o {
                 // Create the anonymized type.
                 if allow {
                     let def_id = tcx.hir.local_def_id(ast_ty.id);
-                    tcx.mk_anon(def_id, Substs::identity_for_item(tcx, def_id))
+                    let env_substs = Substs::identity_for_item(tcx, def_id);
+
+                    // Copy over env substs, replacing lifetimes with static.
+                    let mut new_substs = Vec::with_capacity(env_substs.len());
+                    let num_original_params = env_substs.len() - lifetimes.len();
+                    for i in 0..num_original_params {
+                        let subst = env_substs[i];
+                        if let Some(ty) = subst.as_type() {
+                            new_substs.push(Kind::from(ty));
+                        } else if let Some(_) = subst.as_region() {
+                            // Substitute 'static
+                            new_substs.push(Kind::from(&RegionKind::ReStatic));
+                        }
+                    }
+
+                    // Pull out mappings of the extra lifetimes from the env_substs
+                    // Leave these as is.
+                    for i in num_original_params..env_substs.len() {
+                        new_substs.push(env_substs[i]);
+                    }
+
+                    tcx.mk_anon(def_id, tcx.intern_substs(&new_substs))
                 } else {
                     span_err!(tcx.sess, ast_ty.span, E0562,
                               "`impl Trait` not allowed outside of function \
