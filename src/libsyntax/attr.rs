@@ -589,6 +589,17 @@ pub fn eval_condition<F>(cfg: &ast::MetaItem, sess: &ParseSess, eval: &mut F)
                          -> bool
     where F: FnMut(&ast::MetaItem) -> bool
 {
+    eval_condition_with_custom_list_handler(cfg, sess, eval, &mut |_, _| None)
+}
+
+/// Evaluate a cfg-like condition (with `any` and `all`), using `eval` to
+/// evaluate individual items.
+pub fn eval_condition_with_custom_list_handler<F, P>(
+    cfg: &ast::MetaItem, sess: &ParseSess, eval: &mut F, custom_list_handler: &mut P)
+                         -> bool
+    where F: FnMut(&ast::MetaItem) -> bool,
+          P: FnMut(&ast::MetaItem, &[NestedMetaItem]) -> Option<bool>,
+{
     match cfg.node {
         ast::MetaItemKind::List(ref mis) => {
             for mi in mis.iter() {
@@ -616,8 +627,12 @@ pub fn eval_condition<F>(cfg: &ast::MetaItem, sess: &ParseSess, eval: &mut F)
                     !eval_condition(mis[0].meta_item().unwrap(), sess, eval)
                 },
                 p => {
-                    span_err!(sess.span_diagnostic, cfg.span, E0537, "invalid predicate `{}`", p);
-                    false
+                    if let Some(res) = custom_list_handler(cfg, mis) {
+                        res
+                    } else {
+                        span_err!(sess.span_diagnostic, cfg.span, E0537, "invalid predicate `{}`", p);
+                        false
+                    }
                 }
             }
         },

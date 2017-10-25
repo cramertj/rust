@@ -758,6 +758,7 @@ pub fn force_from_dep_node<'a, 'gcx, 'lcx>(tcx: TyCtxt<'a, 'gcx, 'lcx>,
         DepKind::SpecializationGraph => { force!(specialization_graph_of, def_id!()); }
         DepKind::ObjectSafety => { force!(is_object_safe, def_id!()); }
         DepKind::TraitImpls => { force!(trait_impls_of, def_id!()); }
+        DepKind::MatchesResolutions => { force!(matches_resolutions, def_id!()); }
 
         DepKind::ParamEnv => { force!(param_env, def_id!()); }
         DepKind::DescribeDef => { force!(describe_def, def_id!()); }

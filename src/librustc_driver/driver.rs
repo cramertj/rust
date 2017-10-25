@@ -903,6 +903,7 @@ pub fn phase_2_configure_and_expand<F>(sess: &Session,
             trait_map: resolver.trait_map,
             maybe_unused_trait_imports: resolver.maybe_unused_trait_imports,
             maybe_unused_extern_crates: resolver.maybe_unused_extern_crates,
+            id_to_matches_resolutions: resolver.id_to_matches_resolutions,
         },
         hir_forest,
     })

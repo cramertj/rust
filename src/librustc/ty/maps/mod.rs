@@ -345,6 +345,9 @@ define_maps! { <'tcx>
     [] fn has_copy_closures: HasCopyClosures(CrateNum) -> bool,
     [] fn has_clone_closures: HasCloneClosures(CrateNum) -> bool,
 
+    // Resolutions for rustc_on_unimplemented "matches" clause
+    [] fn matches_resolutions: MatchesResolutions(DefId) -> Option<Rc<Vec<(ast::Name, DefId)>>>,
+
     // Erases regions from `ty` to yield a new type.
     // Normally you would just use `tcx.erase_regions(&value)`,
     // however, which uses this query as a kind of cache.

@@ -889,6 +889,8 @@ pub struct GlobalCtxt<'tcx> {
 
     maybe_unused_extern_crates: Vec<(DefId, Span)>,
 
+    id_to_matches_resolutions: FxHashMap<DefId, Rc<Vec<(Name, DefId)>>>,
+
     // Internal cache for metadata decoding. No need to track deps on this.
     pub rcache: RefCell<FxHashMap<ty::CReaderCacheKey, Ty<'tcx>>>,
 
@@ -1163,6 +1165,11 @@ impl<'a, 'gcx, 'tcx> TyCtxt<'a, 'gcx, 'tcx> {
                 resolutions.maybe_unused_extern_crates
                     .into_iter()
                     .map(|(id, sp)| (hir.local_def_id(id), sp))
+                    .collect(),
+            id_to_matches_resolutions:
+                resolutions.id_to_matches_resolutions
+                    .into_iter()
+                    .map(|(id, matches)| (id, Rc::new(matches)))
                     .collect(),
             hir,
             def_path_hash_to_def_id,
@@ -2252,6 +2259,7 @@ pub fn provide(providers: &mut ty::maps::Providers) {
     // FIXME(#44234) - almost all of these queries have no sub-queries and
     // therefore no actual inputs, they're just reading tables calculated in
     // resolve! Does this work? Unsure! That's what the issue is about
+    providers.matches_resolutions = |tcx, id| tcx.gcx.id_to_matches_resolutions.get(&id).cloned();
     providers.in_scope_traits_map = |tcx, id| tcx.gcx.trait_map.get(&id).cloned();
     providers.module_exports = |tcx, id| tcx.gcx.export_map.get(&id).cloned();
     providers.named_region_map = |tcx, id| tcx.gcx.named_region_map.defs.get(&id).cloned();

@@ -611,6 +611,8 @@ define_dep_nodes!( <'tcx>
     [] HasCloneClosures(CrateNum),
     [] HasCopyClosures(CrateNum),
 
+    [] MatchesResolutions(DefId),
+
     // This query is not expected to have inputs -- as a result, it's
     // not a good candidate for "replay" because it's essentially a
     // pure function of its input (and hence the expectation is that

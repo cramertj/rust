@@ -15,7 +15,7 @@ use ty::{self, TyCtxt};
 use util::common::ErrorReported;
 use util::nodemap::FxHashMap;
 
-use syntax::ast::{MetaItem, NestedMetaItem};
+use syntax::ast::{LitKind, MetaItem, NestedMetaItem};
 use syntax::attr;
 use syntax_pos::Span;
 use syntax_pos::symbol::InternedString;
@@ -83,7 +83,55 @@ impl<'a, 'gcx, 'tcx> OnUnimplementedDirective {
                             "invalid on-clause here",
                             None)
             })?;
-            attr::eval_condition(cond, &tcx.sess.parse_sess, &mut |_| true);
+            attr::eval_condition_with_custom_list_handler(
+                cond, &tcx.sess.parse_sess, &mut |_| true,
+                &mut |attribute, nested_list| {
+                    if attribute.name != "matches" {
+                        return None;
+                    }
+
+                    let matches_resolutions = tcx.matches_resolutions(trait_def_id)
+                                                 .expect(&format!(
+                                                     "No matches resolutions found for trait {:?}", trait_def_id));
+
+                    let mut bound_name = None;
+                    let mut self_name = None;
+
+                    for nested_item in nested_list {
+                        if let Some(lit) = nested_item.literal() {
+                            if let LitKind::Str(name, _) = lit.node {
+                                // This is a trait path like
+                                // matches("IsNoneError", Self="T")
+                                //          ^^^^^^^^^^^
+                                bound_name = Some(name);
+                            }
+                        } else if let Some((key, lit)) = nested_item.name_value_literal() {
+                            if key == "Self" {
+                                if let LitKind::Str(name, _) = lit.node {
+                                    // This is a self type specification like
+                                    // matches("IsNoneError", Self="T")
+                                    //                        ^^^^^^^^
+                                    self_name = Some(name);
+                                }
+                            }
+                        }
+                    }
+
+                    let bound_name = bound_name.expect("matches clause should have a bound literal");
+                    let self_name = self_name.expect("matches clause should have a self KV-pair");
+
+                    let _bound_id = matches_resolutions.iter()
+                        .find(|res| res.0 == bound_name)
+                        .expect("no resolution for matches bound");
+
+                    let _self_id = matches_resolutions.iter()
+                        .find(|res| res.0 == self_name)
+                        .expect("no resolution for self found");
+
+                    // TODO: use these ids to check if the self type implements the bound
+
+                    Some(true)
+                });
             Some(cond.clone())
         };
 

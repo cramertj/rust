@@ -56,7 +56,7 @@ use syntax::ast::{FnDecl, ForeignItem, ForeignItemKind, Generics};
 use syntax::ast::{Item, ItemKind, ImplItem, ImplItemKind};
 use syntax::ast::{Local, Mutability, Pat, PatKind, Path};
 use syntax::ast::{QSelf, TraitItemKind, TraitRef, Ty, TyKind};
-use syntax::ast::{Attribute, LitKind, MetaItemKind, NestedMetaItem, PathSegment};
+use syntax::ast::{Attribute, LitKind, NestedMetaItem, PathSegment};
 use syntax::feature_gate::{feature_err, emit_feature_err, GateIssue};
 
 use syntax_pos::{Span, DUMMY_SP, MultiSpan};
@@ -3703,7 +3703,7 @@ impl<'a> Resolver<'a> {
         let mut matches = Vec::new();
         for attr in attrs {
             self.resolve_matches(
-                node_id, &mut matches, attr.meta_item_list().as_ref().map(|x| x.as_ref()));
+                node_id, false, &mut matches, attr.meta_item_list().as_ref().map(|x| x.as_ref()));
         }
         let def_id = self.definitions.local_def_id(node_id);
         self.id_to_matches_resolutions.insert(def_id, matches);
@@ -3711,41 +3711,38 @@ impl<'a> Resolver<'a> {
 
     fn resolve_matches(&mut self,
                        node_id: NodeId,
+                       seen_on_unimplemented: bool,
                        matches: &mut Vec<(Name, DefId)>,
                        meta_item_list: Option<&[NestedMetaItem]>)
     {
         for item in meta_item_list.into_iter().flat_map(|x| x) {
             // Run recursively
-            self.resolve_matches(node_id, matches, item.meta_item_list());
+            let seen_on_unimplemented = seen_on_unimplemented || item.check_name("rustc_on_unimplemented");
+            self.resolve_matches(node_id, seen_on_unimplemented, matches, item.meta_item_list());
 
-            // Check for "matches"
-            if item.check_name("matches") {
+            // Check for "matches" inside of "rustc_on_unimplemented" attributes
+            if seen_on_unimplemented && item.check_name("matches") {
                 for nested_item in item.meta_item_list().into_iter().flat_map(|x| x) {
-                    if let Some(meta_item) = nested_item.meta_item() {
-                        let (to_resolve, path_source, path_span) = match meta_item.node {
-                            MetaItemKind::Word => {
-                                // This is a trait path like
+                    let mut to_resolve = None;
+                    if let Some(lit) = nested_item.literal() {
+                        if let LitKind::Str(name, _) = lit.node {
+                            // This is a trait path like
+                            // matches("IsNoneError", Self="T")
+                            //          ^^^^^^^^^^^
+                            to_resolve = Some((name, PathSource::Trait, lit.span));
+                        }
+                    } else if let Some((key, lit)) = nested_item.name_value_literal() {
+                        if key == "Self" {
+                            if let LitKind::Str(name, _) = lit.node {
+                                // This is a self type specification like
                                 // matches("IsNoneError", Self="T")
-                                //          ^^^^^^^^^^^
-                                (meta_item.name, PathSource::Trait, meta_item.span)
+                                //                        ^^^^^^^^
+                                to_resolve = Some((name, PathSource::Type, lit.span));
                             }
-                            MetaItemKind::NameValue(ref lit) => {
-                                if let LitKind::Str(symbol, _) =  lit.node {
-                                    if meta_item.name == "Self" {
-                                        // This is a self type specification like
-                                        // matches("IsNoneError", Self="T")
-                                        //                        ^^^^^^^^
-                                        (symbol, PathSource::Type, lit.span)
-                                    } else {
-                                        continue;
-                                    }
-                                } else {
-                                    continue
-                                }
-                            }
-                            MetaItemKind::List(_) => continue,
-                        };
+                        }
+                    }
 
+                    if let Some((name, path_source, span)) = to_resolve {
                         // TODO(cramertj) this will only work for single-part paths such as
                         // `T` or `IsNoneError`-- it won't work for `::mymod::IsNoneError`
                         // or `IsNoneError<T>`-- I'm not sure how best to handle this.
@@ -3755,17 +3752,17 @@ impl<'a> Resolver<'a> {
                             node_id,
                             None,
                             &Path {
-                                span: path_span,
+                                span: span,
                                 segments: vec![PathSegment {
-                                    identifier: to_resolve.to_ident(),
-                                    span: path_span,
+                                    identifier: name.to_ident(),
+                                    span: span,
                                     parameters: None,
                                 }],
                             },
                             path_source
                         );
 
-                        matches.push((to_resolve, resolution.base_def().def_id()));
+                        matches.push((name, resolution.base_def().def_id()));
                     }
                 }
             }

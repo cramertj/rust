@@ -133,6 +133,7 @@ pub struct Resolutions {
     pub trait_map: TraitMap,
     pub maybe_unused_trait_imports: NodeSet,
     pub maybe_unused_extern_crates: Vec<(NodeId, Span)>,
+    pub id_to_matches_resolutions: DefIdMap<Vec<(Name, DefId)>>,
     pub export_map: ExportMap,
 }
 
