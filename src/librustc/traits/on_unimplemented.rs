@@ -11,11 +11,12 @@
 use fmt_macros::{Parser, Piece, Position};
 
 use hir::def_id::DefId;
-use ty::{self, TyCtxt};
+use traits;
+use ty::{self, ToPredicate, TyCtxt};
 use util::common::ErrorReported;
 use util::nodemap::FxHashMap;
 
-use syntax::ast::{LitKind, MetaItem, NestedMetaItem};
+use syntax::ast::{LitKind, MetaItem, Name, NestedMetaItem};
 use syntax::attr;
 use syntax_pos::Span;
 use syntax_pos::symbol::InternedString;
@@ -58,6 +59,43 @@ fn parse_error(tcx: TyCtxt, span: Span,
     ErrorReported
 }
 
+// Resolves `matches("TraitName", Self = "TypeName")` clauses to a trait name and a self name
+fn names_from_matches_clause(nested_items: &[NestedMetaItem]) -> Result<(Name, Name), &'static str> {
+    let mut bound_name = None;
+    let mut self_name = None;
+
+    for nested_item in nested_items {
+        if let Some(lit) = nested_item.literal() {
+            if let LitKind::Str(name, _) = lit.node {
+                // This is a trait path like
+                // matches("IsNoneError", Self="T")
+                //          ^^^^^^^^^^^
+                if bound_name.is_some() {
+                    Err("Multiple string literals provided to rustc_on_unimplemented matches clause")?;
+                }
+                bound_name = Some(name);
+            }
+        } else if let Some((key, lit)) = nested_item.name_value_literal() {
+            if key == "Self" {
+                if let LitKind::Str(name, _) = lit.node {
+                    // This is a self type specification like
+                    // matches("IsNoneError", Self="T")
+                    //                        ^^^^^^^^
+                    if self_name.is_some() {
+                        Err("Multiple Self types provided to rustc_on_unimplemented matches clause")?;
+                    }
+                    self_name = Some(name);
+                }
+            }
+        }
+    }
+
+    Ok((
+        bound_name.ok_or("matches clause should have a bound literal")?,
+        self_name.ok_or("matches clause should have a self KV-pair")?,
+    ))
+}
+
 impl<'a, 'gcx, 'tcx> OnUnimplementedDirective {
     pub fn parse(tcx: TyCtxt<'a, 'gcx, 'tcx>,
                  trait_def_id: DefId,
@@ -90,45 +128,8 @@ impl<'a, 'gcx, 'tcx> OnUnimplementedDirective {
                         return None;
                     }
 
-                    let matches_resolutions = tcx.matches_resolutions(trait_def_id)
-                                                 .expect(&format!(
-                                                     "No matches resolutions found for trait {:?}", trait_def_id));
-
-                    let mut bound_name = None;
-                    let mut self_name = None;
-
-                    for nested_item in nested_list {
-                        if let Some(lit) = nested_item.literal() {
-                            if let LitKind::Str(name, _) = lit.node {
-                                // This is a trait path like
-                                // matches("IsNoneError", Self="T")
-                                //          ^^^^^^^^^^^
-                                bound_name = Some(name);
-                            }
-                        } else if let Some((key, lit)) = nested_item.name_value_literal() {
-                            if key == "Self" {
-                                if let LitKind::Str(name, _) = lit.node {
-                                    // This is a self type specification like
-                                    // matches("IsNoneError", Self="T")
-                                    //                        ^^^^^^^^
-                                    self_name = Some(name);
-                                }
-                            }
-                        }
-                    }
-
-                    let bound_name = bound_name.expect("matches clause should have a bound literal");
-                    let self_name = self_name.expect("matches clause should have a self KV-pair");
-
-                    let _bound_id = matches_resolutions.iter()
-                        .find(|res| res.0 == bound_name)
-                        .expect("no resolution for matches bound");
-
-                    let _self_id = matches_resolutions.iter()
-                        .find(|res| res.0 == self_name)
-                        .expect("no resolution for self found");
-
-                    // TODO: use these ids to check if the self type implements the bound
+                    // TODO: bother with proper error for internal feature?
+                    names_from_matches_clause(nested_list).unwrap();
 
                     Some(true)
                 });
@@ -229,13 +230,60 @@ impl<'a, 'gcx, 'tcx> OnUnimplementedDirective {
 
         for command in self.subcommands.iter().chain(Some(self)).rev() {
             if let Some(ref condition) = command.condition {
-                if !attr::eval_condition(condition, &tcx.sess.parse_sess, &mut |c| {
-                    options.contains(&(&c.name().as_str(),
-                                      match c.value_str().map(|s| s.as_str()) {
-                                          Some(ref s) => Some(s),
-                                          None => None
-                                      }))
-                }) {
+                if !attr::eval_condition_with_custom_list_handler(
+                    condition, &tcx.sess.parse_sess,
+                    &mut |c| {
+                        options.contains(&(&c.name().as_str(),
+                                           match c.value_str().map(|s| s.as_str()) {
+                                               Some(ref s) => Some(s),
+                                               None => None
+                                           }))
+                    },
+                    &mut |attribute, nested_list| {
+                        if attribute.name != "matches" {
+                            return None;
+                        }
+
+                        let (trait_bound_name, self_name) = names_from_matches_clause(nested_list).unwrap();
+                        let matches_resolutions = tcx.matches_resolutions(trait_ref.def_id)
+                            .expect(&format!("No matches resolutions found for trait {:?}", trait_ref.def_id));
+
+                        let trait_bound_id =
+                            matches_resolutions.iter()
+                                .find(|res| res.0 == trait_bound_name)
+                                .map(|res| res.1)
+                                .expect("no resolution for matches bound");
+
+                        let self_id =
+                            matches_resolutions.iter()
+                                .find(|res| res.0 == self_name)
+                                .map(|res| res.1)
+                                .expect("no resolution for matches self type");
+
+                        let self_ty = tcx.type_of(self_id);
+
+                        let did_match = tcx.infer_ctxt().enter(|inferctxt| {
+                            let mut selcx = traits::SelectionContext::new(&inferctxt);
+                            let cause = traits::ObligationCause::new(
+                                            attribute.span(),
+                                            tcx.hir.as_local_node_id(trait_ref.def_id).unwrap(),
+                                            traits::ObligationCauseCode::MiscObligation);
+
+                            let predicate = ty::TraitRef {
+                                def_id: trait_bound_id,
+                                substs: tcx.mk_substs_trait(self_ty, &[]),
+                            }.to_predicate();
+
+                            selcx.evaluate_obligation(&traits::Obligation::new(
+                                cause,
+                                ty::ParamEnv::empty(traits::Reveal::UserFacing),
+                                predicate
+                            ))
+                        });
+
+                        Some(did_match)
+                    }
+                ) {
                     debug!("evaluate: skipping {:?} due to condition", command);
                     continue
                 }
