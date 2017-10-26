@@ -3724,16 +3724,14 @@ impl<'a> Resolver<'a> {
             if seen_on_unimplemented && item.check_name("matches") {
                 for nested_item in item.meta_item_list().into_iter().flat_map(|x| x) {
                     let mut to_resolve = None;
-                    if let Some(lit) = nested_item.literal() {
+                    if let Some((key, lit)) = nested_item.name_value_literal() {
                         if let LitKind::Str(name, _) = lit.node {
-                            // This is a trait path like
-                            // matches("IsNoneError", Self="T")
-                            //          ^^^^^^^^^^^
-                            to_resolve = Some((name, PathSource::Trait, lit.span));
-                        }
-                    } else if let Some((key, lit)) = nested_item.name_value_literal() {
-                        if key == "Self" {
-                            if let LitKind::Str(name, _) = lit.node {
+                            if key == "bound" {
+                                // This is a trait path like
+                                // matches("IsNoneError", Self="T")
+                                //          ^^^^^^^^^^^
+                                to_resolve = Some((name, PathSource::Trait, lit.span));
+                            } else if key == "selftype" {
                                 // This is a self type specification like
                                 // matches("IsNoneError", Self="T")
                                 //                        ^^^^^^^^

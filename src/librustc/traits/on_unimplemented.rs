@@ -11,6 +11,7 @@
 use fmt_macros::{Parser, Piece, Position};
 
 use hir::def_id::DefId;
+use infer::InferCtxt;
 use traits;
 use ty::{self, ToPredicate, TyCtxt};
 use util::common::ErrorReported;
@@ -65,19 +66,17 @@ fn names_from_matches_clause(nested_items: &[NestedMetaItem]) -> Result<(Name, N
     let mut self_name = None;
 
     for nested_item in nested_items {
-        if let Some(lit) = nested_item.literal() {
+        if let Some((key, lit)) = nested_item.name_value_literal() {
             if let LitKind::Str(name, _) = lit.node {
-                // This is a trait path like
-                // matches("IsNoneError", Self="T")
-                //          ^^^^^^^^^^^
-                if bound_name.is_some() {
-                    Err("Multiple string literals provided to rustc_on_unimplemented matches clause")?;
-                }
-                bound_name = Some(name);
-            }
-        } else if let Some((key, lit)) = nested_item.name_value_literal() {
-            if key == "Self" {
-                if let LitKind::Str(name, _) = lit.node {
+                if key == "bound" {
+                    // This is a trait path like
+                    // matches("IsNoneError", Self="T")
+                    //          ^^^^^^^^^^^
+                    if bound_name.is_some() {
+                        Err("Multiple string literals provided to rustc_on_unimplemented matches clause")?;
+                    }
+                    bound_name = Some(name);
+                } else if key == "selftype" {
                     // This is a self type specification like
                     // matches("IsNoneError", Self="T")
                     //                        ^^^^^^^^
@@ -218,11 +217,12 @@ impl<'a, 'gcx, 'tcx> OnUnimplementedDirective {
     }
 
     pub fn evaluate(&self,
-                    tcx: TyCtxt<'a, 'gcx, 'tcx>,
+                    inferctxt: &InferCtxt<'a, 'gcx, 'tcx>,
                     trait_ref: ty::TraitRef<'tcx>,
                     options: &[(&str, Option<&str>)])
                     -> OnUnimplementedNote
     {
+        let tcx = inferctxt.tcx;
         let mut message = None;
         let mut label = None;
         info!("evaluate({:?}, trait_ref={:?}, options={:?})",
@@ -262,24 +262,22 @@ impl<'a, 'gcx, 'tcx> OnUnimplementedDirective {
 
                         let self_ty = tcx.type_of(self_id);
 
-                        let did_match = tcx.infer_ctxt().enter(|inferctxt| {
-                            let mut selcx = traits::SelectionContext::new(&inferctxt);
-                            let cause = traits::ObligationCause::new(
-                                            attribute.span(),
-                                            tcx.hir.as_local_node_id(trait_ref.def_id).unwrap(),
-                                            traits::ObligationCauseCode::MiscObligation);
+                        let mut selcx = traits::SelectionContext::new(inferctxt);
+                        let cause = traits::ObligationCause::new(
+                                        attribute.span(),
+                                        tcx.hir.as_local_node_id(trait_ref.def_id).unwrap(),
+                                        traits::ObligationCauseCode::MiscObligation);
 
-                            let predicate = ty::TraitRef {
-                                def_id: trait_bound_id,
-                                substs: tcx.mk_substs_trait(self_ty, &[]),
-                            }.to_predicate();
+                        let predicate = ty::TraitRef {
+                            def_id: trait_bound_id,
+                            substs: tcx.mk_substs_trait(self_ty, &[]),
+                        }.to_predicate();
 
-                            selcx.evaluate_obligation(&traits::Obligation::new(
-                                cause,
-                                ty::ParamEnv::empty(traits::Reveal::UserFacing),
-                                predicate
-                            ))
-                        });
+                        let did_match = selcx.evaluate_obligation(&traits::Obligation::new(
+                            cause,
+                            ty::ParamEnv::empty(traits::Reveal::UserFacing),
+                            predicate
+                        ));
 
                         Some(did_match)
                     }
