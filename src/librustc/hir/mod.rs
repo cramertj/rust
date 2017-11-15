@@ -1375,6 +1375,8 @@ pub enum ImplItemKind {
     Const(P<Ty>, BodyId),
     /// A method implementation with the given signature and body
     Method(MethodSig, BodyId),
+    /// An abstract type
+    AbstractTy(TyParamBounds, Generics),
     /// An associated type
     Type(P<Ty>),
 }
@@ -1809,6 +1811,8 @@ pub enum Item_ {
     ItemForeignMod(ForeignMod),
     /// Module-level inline assembly (from global_asm!)
     ItemGlobalAsm(P<GlobalAsm>),
+    /// An `abstract type`, e.g. `abstract type Foo<X>: MyTrait;`
+    ItemAbstractTy(TyParamBounds, Generics),
     /// A type alias, e.g. `type Foo = Bar<u8>`
     ItemTy(P<Ty>, Generics),
     /// An enum definition, e.g. `enum Foo<A, B> {C<A>, D<B>}`
@@ -1913,6 +1917,7 @@ pub struct ImplItemRef {
 pub enum AssociatedItemKind {
     Const,
     Method { has_self: bool },
+    AbstractTy,
     Type,
 }
 

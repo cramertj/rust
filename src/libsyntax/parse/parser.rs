@@ -4973,7 +4973,19 @@ impl<'a> Parser<'a> {
         let lo = self.span;
         let vis = self.parse_visibility(false)?;
         let defaultness = self.parse_defaultness()?;
-        let (name, node, generics) = if self.eat_keyword(keywords::Type) {
+        let (name, node, generics) = if self.eat_keyword(keywords::Abstract) {
+            self.expect_keyword(keywords::Type)?;
+            let name = self.parse_ident()?;
+            let mut generics = self.parse_generics()?;
+            let bounds = if self.eat(&token::Colon) {
+                self.parse_ty_param_bounds()?
+            } else {
+                vec![]
+            };
+            generics.where_clause = self.parse_where_clause()?;
+            self.expect(&token::Semi)?;
+            (name, ast::ImplItemKind::AbstractTy(bounds, generics), ast::Generics::default())
+        } else if self.eat_keyword(keywords::Type) {
             let name = self.parse_ident()?;
             self.expect(&token::Eq)?;
             let typ = self.parse_ty()?;
@@ -5826,6 +5838,20 @@ impl<'a> Parser<'a> {
         Ok(self.mk_item(lo.to(prev_span), invalid, ItemKind::ForeignMod(m), visibility, attrs))
     }
 
+    /// Parse `abstract type Foo: Bar;`
+    fn parse_item_abstract_type(&mut self) -> PResult<'a, ItemInfo> {
+        let ident = self.parse_ident()?;
+        let mut tps = self.parse_generics()?;
+        let bounds = if self.eat(&token::Colon) {
+            self.parse_ty_param_bounds()?
+        } else {
+            vec![]
+        };
+        tps.where_clause = self.parse_where_clause()?;
+        self.expect(&token::Semi)?;
+        Ok((ident, ItemKind::AbstractTy(bounds, tps), None))
+    }
+
     /// Parse type Foo = Bar;
     fn parse_item_type(&mut self) -> PResult<'a, ItemInfo> {
         let ident = self.parse_ident()?;
@@ -6129,6 +6155,19 @@ impl<'a> Parser<'a> {
             // MODULE ITEM
             let (ident, item_, extra_attrs) =
                 self.parse_item_mod(&attrs[..])?;
+            let prev_span = self.prev_span;
+            let item = self.mk_item(lo.to(prev_span),
+                                    ident,
+                                    item_,
+                                    visibility,
+                                    maybe_append(attrs, extra_attrs));
+            return Ok(Some(item));
+        }
+        if self.eat_keyword(keywords::Abstract) {
+            // ABSTRACT TYPE ITEM
+            self.expect_keyword(keywords::Type)?;
+            let (ident, item_, extra_attrs) =
+                self.parse_item_abstract_type()?;
             let prev_span = self.prev_span;
             let item = self.mk_item(lo.to(prev_span),
                                     ident,

@@ -1462,6 +1462,9 @@ impl<'a> LoweringContext<'a> {
             ItemKind::Mod(ref m) => hir::ItemMod(self.lower_mod(m)),
             ItemKind::ForeignMod(ref nm) => hir::ItemForeignMod(self.lower_foreign_mod(nm)),
             ItemKind::GlobalAsm(ref ga) => hir::ItemGlobalAsm(self.lower_global_asm(ga)),
+            ItemKind::AbstractTy(ref bounds, ref generics) => {
+                hir::ItemAbstractTy(self.lower_bounds(bounds), self.lower_generics(generics))
+            }
             ItemKind::Ty(ref t, ref generics) => {
                 hir::ItemTy(self.lower_ty(t), self.lower_generics(generics))
             }
@@ -1623,6 +1626,11 @@ impl<'a> LoweringContext<'a> {
                         });
                         hir::ImplItemKind::Method(this.lower_method_sig(sig), body_id)
                     }
+                    ImplItemKind::AbstractTy(ref bounds, ref generics) => {
+                        hir::ImplItemKind::AbstractTy(
+                            this.lower_bounds(bounds),
+                            this.lower_generics(generics))
+                    }
                     ImplItemKind::Type(ref ty) => hir::ImplItemKind::Type(this.lower_ty(ty)),
                     ImplItemKind::Macro(..) => panic!("Shouldn't exist any more"),
                 },
@@ -1642,6 +1650,7 @@ impl<'a> LoweringContext<'a> {
             defaultness: self.lower_defaultness(i.defaultness, true /* [1] */),
             kind: match i.node {
                 ImplItemKind::Const(..) => hir::AssociatedItemKind::Const,
+                ImplItemKind::AbstractTy(..) => hir::AssociatedItemKind::AbstractTy,
                 ImplItemKind::Type(..) => hir::AssociatedItemKind::Type,
                 ImplItemKind::Method(ref sig, _) => hir::AssociatedItemKind::Method {
                     has_self: sig.decl.has_self(),

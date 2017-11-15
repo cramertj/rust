@@ -1224,6 +1224,7 @@ pub struct ImplItem {
 pub enum ImplItemKind {
     Const(P<Ty>, P<Expr>),
     Method(MethodSig, P<Block>),
+    AbstractTy(TyParamBounds, Generics),
     Type(P<Ty>),
     Macro(Mac),
 }
@@ -1935,6 +1936,8 @@ pub enum ItemKind {
     ///
     /// E.g. `type Foo = Bar<u8>;`
     Ty(P<Ty>, Generics),
+    /// An `abstract type` e.g. `abstract type Foo: Trait`;
+    AbstractTy(TyParamBounds, Generics),
     /// An enum definition (`enum` or `pub enum`).
     ///
     /// E.g. `enum Foo<A, B> { C<A>, D<B> }`
@@ -1985,6 +1988,7 @@ impl ItemKind {
             ItemKind::Mod(..) => "module",
             ItemKind::ForeignMod(..) => "foreign module",
             ItemKind::GlobalAsm(..) => "global asm",
+            ItemKind::AbstractTy(..) => "abstract type",
             ItemKind::Ty(..) => "type alias",
             ItemKind::Enum(..) => "enum",
             ItemKind::Struct(..) => "struct",

@@ -107,7 +107,8 @@ impl<'a> visit::Visitor<'a> for DefCollector<'a> {
             ItemKind::AutoImpl(..) | ItemKind::Impl(..) =>
                 DefPathData::Impl,
             ItemKind::Enum(..) | ItemKind::Struct(..) | ItemKind::Union(..) | ItemKind::Trait(..) |
-            ItemKind::ExternCrate(..) | ItemKind::ForeignMod(..) | ItemKind::Ty(..) =>
+            ItemKind::ExternCrate(..) | ItemKind::ForeignMod(..) | ItemKind::Ty(..) |
+            ItemKind::AbstractTy(..) =>
                 DefPathData::TypeNs(i.ident.name.as_str()),
             ItemKind::Mod(..) if i.ident == keywords::Invalid.ident() => {
                 return visit::walk_item(self, i);
@@ -222,7 +223,8 @@ impl<'a> visit::Visitor<'a> for DefCollector<'a> {
         let def_data = match ii.node {
             ImplItemKind::Method(..) | ImplItemKind::Const(..) =>
                 DefPathData::ValueNs(ii.ident.name.as_str()),
-            ImplItemKind::Type(..) => DefPathData::TypeNs(ii.ident.name.as_str()),
+            ImplItemKind::AbstractTy(..) | ImplItemKind::Type(..) =>
+                DefPathData::TypeNs(ii.ident.name.as_str()),
             ImplItemKind::Macro(..) => return self.visit_macro_invoc(ii.id, false),
         };
 

@@ -1142,6 +1142,27 @@ impl<'a> State<'a> {
         self.s.word(";")
     }
 
+    fn print_abstract_type(&mut self,
+                           vis: &ast::Visibility,
+                           ident: ast::Ident,
+                           bounds: &ast::TyParamBounds,
+                           generics: &ast::Generics)
+                           -> io::Result<()> {
+        self.ibox(INDENT_UNIT)?;
+        self.ibox(0)?;
+        self.word_nbsp(&visibility_qualified(vis, "abstract type"))?;
+        self.print_ident(ident)?;
+        self.print_generics(generics)?;
+        self.end()?; // end the inner ibox
+
+        if !bounds.is_empty() {
+            self.print_bounds(":", bounds)?;
+        }
+        self.print_where_clause(&generics.where_clause)?;
+        self.s.word(";")?;
+        self.end() // end the outer ibox
+    }
+
     fn print_associated_type(&mut self,
                              ident: ast::Ident,
                              bounds: Option<&ast::TyParamBounds>,
@@ -1254,6 +1275,9 @@ impl<'a> State<'a> {
                 self.head(&visibility_qualified(&item.vis, "global_asm!"))?;
                 self.s.word(&ga.asm.as_str())?;
                 self.end()?;
+            }
+            ast::ItemKind::AbstractTy(ref bounds, ref generics) => {
+                self.print_abstract_type(&item.vis, item.ident, bounds, generics)?;
             }
             ast::ItemKind::Ty(ref ty, ref params) => {
                 self.ibox(INDENT_UNIT)?;
@@ -1607,6 +1631,9 @@ impl<'a> State<'a> {
                 self.print_method_sig(ii.ident, &ii.generics, sig, &ii.vis)?;
                 self.nbsp()?;
                 self.print_block_with_attrs(body, &ii.attrs)?;
+            }
+            ast::ImplItemKind::AbstractTy(ref bounds, ref generics) => {
+                self.print_abstract_type(&ii.vis, ii.ident, bounds, generics)?;
             }
             ast::ImplItemKind::Type(ref ty) => {
                 self.print_associated_type(ii.ident, None, Some(ty))?;
