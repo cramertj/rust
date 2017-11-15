@@ -1849,6 +1849,7 @@ impl Item_ {
             ItemMod(..) => "module",
             ItemForeignMod(..) => "foreign module",
             ItemGlobalAsm(..) => "global asm",
+            ItemAbstractTy(..) => "abstract type",
             ItemTy(..) => "type alias",
             ItemEnum(..) => "enum",
             ItemStruct(..) => "struct",

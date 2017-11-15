@@ -114,6 +114,7 @@ impl<'a, 'gcx, 'tcx> TyCtxt<'a, 'gcx, 'tcx> {
             match item.node {
                 hir::ImplItemKind::Method(..) => "method body",
                 hir::ImplItemKind::Const(..) |
+                hir::ImplItemKind::AbstractTy(..) |
                 hir::ImplItemKind::Type(_) => "associated item"
             }
         }

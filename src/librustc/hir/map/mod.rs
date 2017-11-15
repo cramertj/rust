@@ -1146,6 +1146,7 @@ fn node_id_to_string(map: &Map, id: NodeId, include_id: bool) -> String {
                 ItemMod(..) => "mod",
                 ItemForeignMod(..) => "foreign mod",
                 ItemGlobalAsm(..) => "global asm",
+                ItemAbstractTy(..) => "abstract ty",
                 ItemTy(..) => "ty",
                 ItemEnum(..) => "enum",
                 ItemStruct(..) => "struct",
@@ -1160,17 +1161,14 @@ fn node_id_to_string(map: &Map, id: NodeId, include_id: bool) -> String {
             format!("foreign item {}{}", path_str(), id_str)
         }
         Some(NodeImplItem(ii)) => {
-            match ii.node {
-                ImplItemKind::Const(..) => {
-                    format!("assoc const {} in {}{}", ii.name, path_str(), id_str)
-                }
-                ImplItemKind::Method(..) => {
-                    format!("method {} in {}{}", ii.name, path_str(), id_str)
-                }
-                ImplItemKind::Type(_) => {
-                    format!("assoc type {} in {}{}", ii.name, path_str(), id_str)
-                }
-            }
+            let kind_name = match ii.node {
+                ImplItemKind::Const(..) => "assoc const",
+                ImplItemKind::Method(..) => "method",
+                ImplItemKind::AbstractTy(..) => "assoc abstract type",
+                ImplItemKind::Type(_) => "assoc type",
+            };
+
+            format!("{} {} in {}{}", kind_name, ii.name, path_str(), id_str)
         }
         Some(NodeTraitItem(ti)) => {
             let kind = match ti.node {

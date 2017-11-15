@@ -507,6 +507,21 @@ impl<'a> State<'a> {
         self.s.word(";")
     }
 
+    fn print_abstract_type(&mut self,
+                           name: ast::Name,
+                           bounds: &hir::TyParamBounds,
+                           generics: &hir::Generics,)
+                           -> io::Result<()> {
+        self.word_space("abstract type")?;
+        self.print_name(name)?;
+        self.print_generics(generics)?;
+        if !bounds.is_empty() {
+            self.print_bounds(":", bounds)?;
+        }
+        self.print_where_clause(&generics.where_clause)?;
+        self.s.word(";")
+    }
+
     fn print_associated_type(&mut self,
                              name: ast::Name,
                              bounds: Option<&hir::TyParamBounds>,
@@ -633,6 +648,22 @@ impl<'a> State<'a> {
                 self.head(&visibility_qualified(&item.vis, "global asm"))?;
                 self.s.word(&ga.asm.as_str())?;
                 self.end()?
+            }
+            hir::ItemAbstractTy(ref bounds, ref generics) => {
+                self.ibox(indent_unit)?;
+                self.ibox(0)?;
+                self.word_nbsp(&visibility_qualified(&item.vis, "abstract type"))?;
+                self.print_name(item.name)?;
+                self.print_generics(generics)?;
+                self.end()?; // end the inner ibox
+
+                if !bounds.is_empty() {
+                    self.print_bounds(":", bounds)?;
+                }
+
+                self.print_where_clause(&generics.where_clause)?;
+                self.s.word(";")?;
+                self.end()?; // end the outer ibox
             }
             hir::ItemTy(ref ty, ref params) => {
                 self.ibox(indent_unit)?;
@@ -954,6 +985,9 @@ impl<'a> State<'a> {
                 self.end()?; // need to close a box
                 self.end()?; // need to close a box
                 self.ann.nested(self, Nested::Body(body))?;
+            }
+            hir::ImplItemKind::AbstractTy(ref bounds, ref generics) => {
+                self.print_abstract_type(ii.name, bounds, generics)?;
             }
             hir::ImplItemKind::Type(ref ty) => {
                 self.print_associated_type(ii.name, None, Some(ty))?;

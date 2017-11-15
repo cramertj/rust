@@ -734,6 +734,7 @@ impl<'gcx> HashStable<StableHashingContext<'gcx>> for hir::ImplItem {
 
         let is_const = match *node {
             hir::ImplItemKind::Const(..) |
+            hir::ImplItemKind::AbstractTy(..) |
             hir::ImplItemKind::Type(..) => true,
             hir::ImplItemKind::Method(hir::MethodSig { constness, .. }, _) => {
                 constness == hir::Constness::Const
@@ -875,6 +876,7 @@ impl<'gcx> HashStable<StableHashingContext<'gcx>> for hir::Item {
             hir::ItemAutoImpl(..) |
             hir::ItemTrait(..)       |
             hir::ItemImpl(..)        |
+            hir::ItemAbstractTy(..)  |
             hir::ItemTy(..)          |
             hir::ItemEnum(..)        |
             hir::ItemStruct(..)      |
@@ -948,6 +950,7 @@ for hir::AssociatedItemKind {
         mem::discriminant(self).hash_stable(hcx, hasher);
         match *self {
             hir::AssociatedItemKind::Const |
+            hir::AssociatedItemKind::AbstractTy |
             hir::AssociatedItemKind::Type => {
                 // No fields to hash.
             }

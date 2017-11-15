@@ -195,6 +195,7 @@ impl<'a, 'tcx> ReachableContext<'a, 'tcx> {
                             }
                         }
                     }
+                    hir::ImplItemKind::AbstractTy(..) |
                     hir::ImplItemKind::Type(_) => false,
                 }
             }
@@ -271,7 +272,7 @@ impl<'a, 'tcx> ReachableContext<'a, 'tcx> {
                     hir::ItemImpl(..) | hir::ItemTrait(..) |
                     hir::ItemStruct(..) | hir::ItemEnum(..) |
                     hir::ItemUnion(..) | hir::ItemAutoImpl(..) |
-                    hir::ItemGlobalAsm(..) => {}
+                    hir::ItemAbstractTy(..) | hir::ItemGlobalAsm(..) => {}
                 }
             }
             hir_map::NodeTraitItem(trait_method) => {
@@ -298,6 +299,7 @@ impl<'a, 'tcx> ReachableContext<'a, 'tcx> {
                             self.visit_nested_body(body)
                         }
                     }
+                    hir::ImplItemKind::AbstractTy(..) |
                     hir::ImplItemKind::Type(_) => {}
                 }
             }
