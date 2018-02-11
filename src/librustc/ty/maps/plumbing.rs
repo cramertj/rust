@@ -789,6 +789,7 @@ pub fn force_from_dep_node<'a, 'gcx, 'lcx>(tcx: TyCtxt<'a, 'gcx, 'lcx>,
 
         DepKind::BorrowCheck => { force!(borrowck, def_id!()); }
         DepKind::MirBorrowCheck => { force!(mir_borrowck, def_id!()); }
+        DepKind::MustCloneCheckResult => { force!(must_clone_result, def_id!()); }
         DepKind::UnsafetyCheckResult => { force!(unsafety_check_result, def_id!()); }
         DepKind::UnsafeDeriveOnReprPacked => { force!(unsafe_derive_on_repr_packed, def_id!()); }
         DepKind::Reachability => { force!(reachable_set, LOCAL_CRATE); }
@@ -977,6 +978,7 @@ macro_rules! impl_load_from_cache {
 impl_load_from_cache!(
     TypeckTables => typeck_tables_of,
     MirOptimized => optimized_mir,
+    MustCloneCheckResult => must_clone_result,
     UnsafetyCheckResult => unsafety_check_result,
     BorrowCheck => borrowck,
     MirBorrowCheck => mir_borrowck,

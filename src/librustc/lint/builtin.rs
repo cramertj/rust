@@ -193,6 +193,12 @@ declare_lint! {
 }
 
 declare_lint! {
+    pub MUST_CLONE,
+    Warn,
+    "warns on dubious implicit copies"
+}
+
+declare_lint! {
     pub PARENTHESIZED_PARAMS_IN_TYPES_AND_MODULES,
     Deny,
     "detects parenthesized generic parameters in type and module names"

@@ -159,6 +159,8 @@ define_maps! { <'tcx>
 
     [] fn mir_validated: MirValidated(DefId) -> &'tcx Steal<mir::Mir<'tcx>>,
 
+    [] fn must_clone_result: MustCloneCheckResult(DefId) -> mir::MustCloneCheckResult,
+
     /// MIR after our optimization passes have run. This is MIR that is ready
     /// for trans. This is also the only query that can fetch non-local MIR, at present.
     [] fn optimized_mir: MirOptimized(DefId) -> &'tcx mir::Mir<'tcx>,

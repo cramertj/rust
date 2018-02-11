@@ -44,10 +44,12 @@ pub mod copy_prop;
 pub mod generator;
 pub mod inline;
 pub mod lower_128bit;
+pub mod must_clone_lint;
 
 pub(crate) fn provide(providers: &mut Providers) {
     self::qualify_consts::provide(providers);
     self::check_unsafety::provide(providers);
+    self::must_clone_lint::provide(providers);
     *providers = Providers {
         mir_keys,
         mir_built,

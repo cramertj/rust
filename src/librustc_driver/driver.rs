@@ -1064,6 +1064,13 @@ pub fn phase_3_run_analysis_passes<'tcx, F, R>(trans: &TransCrate,
              || for def_id in tcx.body_owners() {
                  mir::transform::check_unsafety::check_unsafety(tcx, def_id)
              });
+
+        time(time_passes,
+             "MIR must_clone linting",
+             || for def_id in tcx.body_owners() {
+                 mir::transform::must_clone_lint::must_clone_lint(tcx, def_id)
+             });
+
         // Avoid overwhelming user with errors if type checking failed.
         // I'm not sure how helpful this is, to be honest, but it avoids
         // a

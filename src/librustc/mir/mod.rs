@@ -1895,6 +1895,19 @@ impl Location {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, RustcEncodable, RustcDecodable)]
+pub struct MustCloneViolation {
+    pub source_info: SourceInfo,
+    pub description: InternedString,
+    pub lint_node_id: ast::NodeId,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash, RustcEncodable, RustcDecodable)]
+pub struct MustCloneCheckResult {
+    /// Violations that are propagated *upwards* from this function
+    pub violations: Rc<[MustCloneViolation]>,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, RustcEncodable, RustcDecodable)]
 pub enum UnsafetyViolationKind {
     General,
     ExternStatic(ast::NodeId),
