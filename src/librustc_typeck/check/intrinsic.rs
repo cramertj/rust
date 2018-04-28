@@ -65,6 +65,7 @@ fn equate_intrinsic_type<'a, 'tcx>(tcx: TyCtxt<'a, 'tcx, 'tcx>,
         inputs.into_iter(),
         output,
         false,
+        false,
         hir::Unsafety::Unsafe,
         abi
     )));
@@ -307,6 +308,7 @@ pub fn check_intrinsic_type<'a, 'tcx>(tcx: TyCtxt<'a, 'tcx, 'tcx>,
                 let fn_ty = ty::Binder::bind(tcx.mk_fn_sig(
                     iter::once(mut_u8),
                     tcx.mk_nil(),
+                    false,
                     false,
                     hir::Unsafety::Normal,
                     Abi::Rust,

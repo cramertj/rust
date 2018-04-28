@@ -2250,15 +2250,10 @@ impl<'a, 'gcx, 'tcx> TyCtxt<'a, 'gcx, 'tcx> {
     /// a `fn(u32, i32)`.
     pub fn coerce_closure_fn_ty(self, sig: PolyFnSig<'tcx>) -> Ty<'tcx> {
         let converted_sig = sig.map_bound(|s| {
-            let params_iter = match s.inputs()[0].sty {
-                ty::TyTuple(params) => {
-                    params.into_iter().cloned()
-                }
-                _ => bug!(),
-            };
             self.mk_fn_sig(
-                params_iter,
+                s.inputs().iter().cloned(),
                 s.output(),
+                true,
                 s.variadic,
                 hir::Unsafety::Normal,
                 abi::Abi::Rust,
@@ -2553,6 +2548,7 @@ impl<'a, 'gcx, 'tcx> TyCtxt<'a, 'gcx, 'tcx> {
     pub fn mk_fn_sig<I>(self,
                         inputs: I,
                         output: I::Item,
+                        spread: bool,
                         variadic: bool,
                         unsafety: hir::Unsafety,
                         abi: abi::Abi)
@@ -2562,7 +2558,7 @@ impl<'a, 'gcx, 'tcx> TyCtxt<'a, 'gcx, 'tcx> {
     {
         inputs.chain(iter::once(output)).intern_with(|xs| ty::FnSig {
             inputs_and_output: self.intern_type_list(xs),
-            variadic, unsafety, abi
+            spread, variadic, unsafety, abi
         })
     }
 

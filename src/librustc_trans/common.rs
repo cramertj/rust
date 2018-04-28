@@ -416,6 +416,7 @@ pub fn ty_fn_sig<'a, 'tcx>(cx: &CodegenCx<'a, 'tcx>,
             sig.map_bound(|sig| tcx.mk_fn_sig(
                 iter::once(*env_ty.skip_binder()).chain(sig.inputs().iter().cloned()),
                 sig.output(),
+                sig.spread,
                 sig.variadic,
                 sig.unsafety,
                 sig.abi
@@ -437,6 +438,7 @@ pub fn ty_fn_sig<'a, 'tcx>(cx: &CodegenCx<'a, 'tcx>,
 
                 tcx.mk_fn_sig(iter::once(env_ty),
                     ret_ty,
+                    false,
                     false,
                     hir::Unsafety::Normal,
                     Abi::Rust

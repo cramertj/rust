@@ -251,6 +251,7 @@ impl_stable_hash_for!(struct ty::GenSig<'tcx> {
 
 impl_stable_hash_for!(struct ty::FnSig<'tcx> {
     inputs_and_output,
+    spread,
     variadic,
     unsafety,
     abi

@@ -22,7 +22,6 @@ use rustc::ty::{self, ToPolyTraitRef, Ty};
 use rustc::ty::subst::Substs;
 use rustc::ty::TypeFoldable;
 use std::cmp;
-use std::iter;
 use rustc_target::spec::abi::Abi;
 use syntax::codemap::Span;
 use rustc::hir;
@@ -135,12 +134,12 @@ impl<'a, 'gcx, 'tcx> FnCtxt<'a, 'gcx, 'tcx> {
             expr.id, closure_type
         );
 
-        // Tuple up the arguments and insert the resulting function type into
-        // the `closures` table.
+        // Insert the closure type into the `closures` table.
         let sig = bound_sig.map_bound(|sig| {
             self.tcx.mk_fn_sig(
-                iter::once(self.tcx.intern_tup(sig.inputs())),
+                sig.inputs().iter().cloned(),
                 sig.output(),
+                false,
                 sig.variadic,
                 sig.unsafety,
                 sig.abi,
@@ -303,19 +302,16 @@ impl<'a, 'gcx, 'tcx> FnCtxt<'a, 'gcx, 'tcx> {
             return None;
         }
 
-        let arg_param_ty = trait_ref.skip_binder().substs.type_at(1);
-        let arg_param_ty = self.resolve_type_vars_if_possible(&arg_param_ty);
-        debug!(
-            "deduce_sig_from_projection: arg_param_ty {:?}",
-            arg_param_ty
-        );
-
-        let input_tys = match arg_param_ty.sty {
-            ty::TyTuple(tys) => tys.into_iter(),
-            _ => {
-                return None;
-            }
-        };
+        let input_tys = trait_ref.skip_binder().substs.types().enumerate()
+            .map(|(index, arg_param)| {
+                let input_ty = self.resolve_type_vars_if_possible(&arg_param);
+                debug!(
+                    "deduce_sig_from_projection: index {:?} arg_param_ty {:?}",
+                    index,
+                    input_ty,
+                );
+                input_ty
+            });
 
         let ret_param_ty = projection.skip_binder().ty;
         let ret_param_ty = self.resolve_type_vars_if_possible(&ret_param_ty);
@@ -325,8 +321,9 @@ impl<'a, 'gcx, 'tcx> FnCtxt<'a, 'gcx, 'tcx> {
         );
 
         let sig = self.tcx.mk_fn_sig(
-            input_tys.cloned(),
+            input_tys,
             ret_param_ty,
+            false,
             false,
             hir::Unsafety::Normal,
             Abi::Rust,
@@ -461,6 +458,7 @@ impl<'a, 'gcx, 'tcx> FnCtxt<'a, 'gcx, 'tcx> {
         let bound_sig = ty::Binder::bind(self.tcx.mk_fn_sig(
             expected_sig.sig.inputs().iter().cloned(),
             expected_sig.sig.output(),
+            false,
             decl.variadic,
             hir::Unsafety::Normal,
             Abi::RustCall,
@@ -610,6 +608,7 @@ impl<'a, 'gcx, 'tcx> FnCtxt<'a, 'gcx, 'tcx> {
         let result = ty::Binder::bind(self.tcx.mk_fn_sig(
             supplied_arguments,
             supplied_return,
+            false,
             decl.variadic,
             hir::Unsafety::Normal,
             Abi::RustCall,
@@ -642,6 +641,7 @@ impl<'a, 'gcx, 'tcx> FnCtxt<'a, 'gcx, 'tcx> {
         let result = ty::Binder::bind(self.tcx.mk_fn_sig(
             supplied_arguments,
             self.tcx.types.err,
+            false,
             decl.variadic,
             hir::Unsafety::Normal,
             Abi::RustCall,

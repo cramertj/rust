@@ -1176,6 +1176,7 @@ fn fn_sig<'a, 'tcx>(tcx: TyCtxt<'a, 'tcx, 'tcx>,
                 inputs,
                 ty,
                 false,
+                false,
                 hir::Unsafety::Normal,
                 abi::Abi::Rust
             ))

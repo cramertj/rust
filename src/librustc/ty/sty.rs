@@ -806,11 +806,15 @@ impl<'tcx> PolyGenSig<'tcx> {
 /// decided to use to refer to the input/output types.
 ///
 /// - `inputs` is the list of arguments and their modes.
+/// - `spread` determines whether or not to spread the final
+///            argument to the function (which must be a single tuple)
+///            into multiple arguments.
 /// - `output` is the return type.
 /// - `variadic` indicates whether this is a variadic function. (only true for foreign fns)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, RustcEncodable, RustcDecodable)]
 pub struct FnSig<'tcx> {
     pub inputs_and_output: &'tcx Slice<Ty<'tcx>>,
+    pub spread: bool,
     pub variadic: bool,
     pub unsafety: hir::Unsafety,
     pub abi: abi::Abi,
@@ -821,8 +825,37 @@ impl<'tcx> FnSig<'tcx> {
         &self.inputs_and_output[..self.inputs_and_output.len() - 1]
     }
 
+    pub fn inputs_spread(&self) -> SpreadInputsIter<'tcx> {
+        SpreadInputsIter {
+            inputs: self.inputs(),
+            spread: self.spread,
+        }
+    }
+
     pub fn output(&self) -> Ty<'tcx> {
         self.inputs_and_output[self.inputs_and_output.len() - 1]
+    }
+}
+
+pub struct SpreadInputsIter<'tcx> {
+    inputs: &'tcx [Ty<'tcx>],
+    spread: bool,
+}
+
+impl<'tcx> Iterator for SpreadInputsIter<'tcx> {
+    type Item = Ty<'tcx>;
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.inputs.len() == 1 && self.spread {
+            if let Some(TyTuple(types)) = self.inputs.get(0).map(|x| &x.sty) {
+                self.inputs = *types;
+                self.spread = false;
+            } else {
+                bug!("Attempted to spread function with no final tuple argument");
+            }
+        }
+        let (head, tail) = self.inputs.split_first()?;
+        self.inputs = tail;
+        Some(*head)
     }
 }
 

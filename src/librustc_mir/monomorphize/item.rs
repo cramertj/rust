@@ -353,7 +353,7 @@ impl<'a, 'tcx> DefPathBasedNames<'a, 'tcx> {
                 );
 
                 if !sig.inputs().is_empty() {
-                    for &parameter_type in sig.inputs() {
+                    for parameter_type in sig.inputs_spread() {
                         self.push_type_name(parameter_type, output);
                         output.push_str(", ");
                     }

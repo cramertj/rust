@@ -1189,6 +1189,7 @@ impl<'o, 'gcx: 'tcx, 'tcx> AstConv<'gcx, 'tcx>+'o {
         let bare_fn_ty = ty::Binder::bind(tcx.mk_fn_sig(
             input_tys.into_iter(),
             output_ty,
+            false,
             decl.variadic,
             unsafety,
             abi

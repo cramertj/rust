@@ -400,6 +400,7 @@ impl<'a, 'tcx> Lift<'tcx> for ty::FnSig<'a> {
         tcx.lift(&self.inputs_and_output).map(|x| {
             ty::FnSig {
                 inputs_and_output: x,
+                spread: self.spread,
                 variadic: self.variadic,
                 unsafety: self.unsafety,
                 abi: self.abi,
@@ -922,7 +923,7 @@ BraceStructTypeFoldableImpl! {
 
 BraceStructTypeFoldableImpl! {
     impl<'tcx> TypeFoldable<'tcx> for ty::FnSig<'tcx> {
-        inputs_and_output, variadic, unsafety, abi
+        inputs_and_output, spread, variadic, unsafety, abi
     }
 }
 

@@ -1043,6 +1043,7 @@ fn check_fn<'a, 'gcx, 'tcx>(inherited: &'a Inherited<'a, 'gcx, 'tcx>,
     fn_sig = fcx.tcx.mk_fn_sig(
         fn_sig.inputs().iter().cloned(),
         ret_ty,
+        fn_sig.spread,
         fn_sig.variadic,
         fn_sig.unsafety,
         fn_sig.abi

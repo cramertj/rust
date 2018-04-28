@@ -142,7 +142,7 @@ pub fn push_debuginfo_type_name<'a, 'tcx>(cx: &CodegenCx<'a, 'tcx>,
 
             let sig = cx.tcx.normalize_erasing_late_bound_regions(ty::ParamEnv::reveal_all(), &sig);
             if !sig.inputs().is_empty() {
-                for &parameter_type in sig.inputs() {
+                for parameter_type in sig.inputs_spread() {
                     push_debuginfo_type_name(cx, parameter_type, true, output);
                     output.push_str(", ");
                 }

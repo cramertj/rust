@@ -271,6 +271,7 @@ impl<'a, 'gcx, 'tcx> FnCtxt<'a, 'gcx, 'tcx> {
                     self.err_args(arg_exprs.len()).into_iter(),
                     self.tcx.types.err,
                     false,
+                    false,
                     hir::Unsafety::Normal,
                     abi::Abi::Rust
                 )), None)

@@ -962,6 +962,7 @@ fn gen_fn<'a, 'tcx>(cx: &CodegenCx<'a, 'tcx>,
         inputs.into_iter(),
         output,
         false,
+        false,
         hir::Unsafety::Unsafe,
         Abi::Rust
     )));
@@ -988,6 +989,7 @@ fn get_rust_try_fn<'a, 'tcx>(cx: &CodegenCx<'a, 'tcx>,
     let fn_ty = tcx.mk_fn_ptr(ty::Binder::bind(tcx.mk_fn_sig(
         iter::once(i8p),
         tcx.mk_nil(),
+        false,
         false,
         hir::Unsafety::Unsafe,
         Abi::Rust

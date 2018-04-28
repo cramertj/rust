@@ -411,6 +411,7 @@ impl<'b, 'tcx> CodegenCx<'b, 'tcx> {
             iter::once(tcx.mk_mut_ptr(tcx.types.u8)),
             tcx.types.never,
             false,
+            false,
             hir::Unsafety::Unsafe,
             Abi::C
         )));

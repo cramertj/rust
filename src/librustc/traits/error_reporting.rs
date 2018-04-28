@@ -1092,6 +1092,10 @@ impl<'a, 'gcx, 'tcx> InferCtxt<'a, 'gcx, 'tcx> {
                 tcx.mk_fn_sig(
                     inputs.iter().map(|&x| x),
                     tcx.mk_infer(ty::TyVar(ty::TyVid { index: 0 })),
+                    // TODO(cramertj) should we change this to true
+                    // and pass *all* of the substs instead? Probably doesn't matter
+                    // either way.
+                    false,
                     false,
                     hir::Unsafety::Normal,
                     ::rustc_target::spec::abi::Abi::Rust
@@ -1100,6 +1104,7 @@ impl<'a, 'gcx, 'tcx> InferCtxt<'a, 'gcx, 'tcx> {
                 tcx.mk_fn_sig(
                     ::std::iter::once(inputs),
                     tcx.mk_infer(ty::TyVar(ty::TyVid { index: 0 })),
+                    false,
                     false,
                     hir::Unsafety::Normal,
                     ::rustc_target::spec::abi::Abi::Rust

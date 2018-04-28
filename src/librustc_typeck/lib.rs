@@ -218,6 +218,7 @@ fn check_main_fn_ty<'a, 'tcx>(tcx: TyCtxt<'a, 'tcx, 'tcx>,
                     iter::empty(),
                     expected_return_type,
                     false,
+                    false,
                     hir::Unsafety::Normal,
                     Abi::Rust
                 )
@@ -269,6 +270,7 @@ fn check_start_fn_ty<'a, 'tcx>(tcx: TyCtxt<'a, 'tcx, 'tcx>,
                         tcx.mk_imm_ptr(tcx.mk_imm_ptr(tcx.types.u8))
                     ].iter().cloned(),
                     tcx.types.isize,
+                    false,
                     false,
                     hir::Unsafety::Normal,
                     Abi::Rust

@@ -161,12 +161,12 @@ impl<'tcx> Relate<'tcx> for ty::FnSig<'tcx> {
         let unsafety = relation.relate(&a.unsafety, &b.unsafety)?;
         let abi = relation.relate(&a.abi, &b.abi)?;
 
-        if a.inputs().len() != b.inputs().len() {
+        if a.inputs_spread().count() != b.inputs_spread().count() {
             return Err(TypeError::ArgCount);
         }
 
-        let inputs_and_output = a.inputs().iter().cloned()
-            .zip(b.inputs().iter().cloned())
+        let inputs_and_output = a.inputs_spread()
+            .zip(b.inputs_spread())
             .map(|x| (x, false))
             .chain(iter::once(((a.output(), b.output()), true)))
             .map(|((a, b), is_output)| {
@@ -178,6 +178,7 @@ impl<'tcx> Relate<'tcx> for ty::FnSig<'tcx> {
             }).collect::<Result<AccumulateVec<[_; 8]>, _>>()?;
         Ok(ty::FnSig {
             inputs_and_output: relation.tcx().intern_type_list(&inputs_and_output),
+            spread: false,
             variadic: a.variadic,
             unsafety,
             abi,
