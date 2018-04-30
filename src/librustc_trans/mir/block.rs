@@ -13,7 +13,7 @@ use rustc::middle::lang_items;
 use rustc::ty::{self, Ty, TypeFoldable};
 use rustc::ty::layout::{self, LayoutOf};
 use rustc::mir;
-use abi::{Abi, ArgType, ArgTypeExt, FnType, FnTypeExt, LlvmType, PassMode};
+use abi::{ArgType, ArgTypeExt, FnType, FnTypeExt, LlvmType, PassMode};
 use base;
 use callee;
 use builder::Builder;
@@ -437,7 +437,6 @@ impl<'a, 'tcx> FunctionCx<'a, 'tcx> {
                     ty::ParamEnv::reveal_all(),
                     &sig,
                 );
-                let abi = sig.abi;
 
                 // Handle intrinsics old trans wants Expr's for, ourselves.
                 let intrinsic = match def {
@@ -545,8 +544,8 @@ impl<'a, 'tcx> FunctionCx<'a, 'tcx> {
                     return;
                 }
 
-                // Split the rust-call tupled arguments off.
-                let (first_args, untuple) = if abi == Abi::RustCall && !args.is_empty() {
+                // Split the tupled arguments off.
+                let (first_args, untuple) = if sig.spread && !args.is_empty() {
                     let (tup, args) = args.split_last().unwrap();
                     (args, Some(tup))
                 } else {

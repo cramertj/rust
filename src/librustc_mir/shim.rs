@@ -20,7 +20,6 @@ use rustc::mir::interpret::{Value, PrimVal};
 
 use rustc_data_structures::indexed_vec::{IndexVec, Idx};
 
-use rustc_target::spec::abi::Abi;
 use syntax::ast;
 use syntax_pos::Span;
 
@@ -817,7 +816,7 @@ fn build_call_shim<'a, 'tcx>(tcx: TyCtxt<'a, 'tcx, 'tcx>,
         vec![],
         span
     );
-    if let Abi::RustCall = sig.abi {
+    if sig.spread {
         mir.spread_arg = Some(Local::new(sig.inputs().len()));
     }
     mir

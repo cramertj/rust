@@ -340,25 +340,6 @@ impl<'a, 'tcx> FnTypeExt<'a, 'tcx> for FnType<'tcx, Ty<'tcx>> {
             Cdecl => Conv::C,
         };
 
-        let mut inputs = sig.inputs();
-        let extra_args = if sig.abi == RustCall {
-            assert!(!sig.variadic && extra_args.is_empty());
-
-            match sig.inputs().last().unwrap().sty {
-                ty::TyTuple(ref tupled_arguments) => {
-                    inputs = &sig.inputs()[0..sig.inputs().len() - 1];
-                    tupled_arguments
-                }
-                _ => {
-                    bug!("argument to function with \"rust-call\" ABI \
-                          is not a tuple");
-                }
-            }
-        } else {
-            assert!(sig.variadic || extra_args.is_empty());
-            extra_args
-        };
-
         let target = &cx.sess().target.target;
         let win_x64_gnu = target.target_os == "windows"
                        && target.arch == "x86_64"
@@ -476,7 +457,7 @@ impl<'a, 'tcx> FnTypeExt<'a, 'tcx> for FnType<'tcx, Ty<'tcx>> {
 
         FnType {
             ret: arg_of(sig.output(), true),
-            args: inputs.iter().chain(extra_args.iter()).map(|ty| {
+            args: sig.inputs_spread().chain(extra_args.iter().cloned()).map(|ty| {
                 arg_of(ty, false)
             }).collect(),
             variadic: sig.variadic,

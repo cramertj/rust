@@ -27,7 +27,6 @@ use rustc::hir::TransFnAttrFlags;
 use rustc::hir::def_id::{DefId, CrateNum};
 use rustc::ty::subst::Substs;
 
-use abi::Abi;
 use common::CodegenCx;
 use builder::Builder;
 use monomorphize::Instance;
@@ -317,11 +316,7 @@ pub fn create_function_debug_context<'a, 'tcx>(cx: &CodegenCx<'a, 'tcx>,
             _ => type_metadata(cx, sig.output(), syntax_pos::DUMMY_SP)
         });
 
-        let inputs = if sig.abi == Abi::RustCall {
-            &sig.inputs()[..sig.inputs().len() - 1]
-        } else {
-            sig.inputs()
-        };
+        let inputs = sig.inputs_spread();
 
         // Arguments types
         if cx.sess().target.target.options.is_like_msvc {
@@ -335,7 +330,7 @@ pub fn create_function_debug_context<'a, 'tcx>(cx: &CodegenCx<'a, 'tcx>,
             // and a function `fn bar(x: [(); 7])` as `fn bar(x: *const ())`.
             // This transformed type is wrong, but these function types are
             // already inaccurate due to ABI adjustments (see #42800).
-            signature.extend(inputs.iter().map(|&t| {
+            signature.extend(inputs.map(|t| {
                 let t = match t.sty {
                     ty::TyArray(ct, _)
                         if (ct == cx.tcx.types.u8) || cx.layout_of(ct).is_zst() => {
@@ -346,17 +341,9 @@ pub fn create_function_debug_context<'a, 'tcx>(cx: &CodegenCx<'a, 'tcx>,
                 type_metadata(cx, t, syntax_pos::DUMMY_SP)
             }));
         } else {
-            signature.extend(inputs.iter().map(|t| {
-                type_metadata(cx, t, syntax_pos::DUMMY_SP)
+            signature.extend(inputs.map(|t| {
+                type_metadata(cx, &t, syntax_pos::DUMMY_SP)
             }));
-        }
-
-        if sig.abi == Abi::RustCall && !sig.inputs().is_empty() {
-            if let ty::TyTuple(args) = sig.inputs()[sig.inputs().len() - 1].sty {
-                for &argument_type in args {
-                    signature.push(type_metadata(cx, argument_type, syntax_pos::DUMMY_SP));
-                }
-            }
         }
 
         return create_DIArray(DIB(cx), &signature[..]);

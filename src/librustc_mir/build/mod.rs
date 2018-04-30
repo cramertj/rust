@@ -100,6 +100,7 @@ pub fn mir_build<'a, 'tcx>(tcx: TyCtxt<'a, 'tcx, 'tcx>, def_id: DefId) -> Mir<'t
                 ty::TyClosure(..) => {
                     // HACK(eddyb) Avoid having RustCall on closures,
                     // as it adds unnecessary (and wrong) auto-tupling.
+                    // TODO(cramertj) resolve
                     abi = Abi::Rust;
                     Some((liberated_closure_env_ty(tcx, id, body_id), None))
                 }
@@ -439,7 +440,7 @@ fn construct_fn<'a, 'gcx, 'tcx, A>(hir: Cx<'a, 'gcx, 'tcx>,
     assert_eq!(block, builder.return_block());
 
     let mut spread_arg = None;
-    if abi == Abi::RustCall {
+    if abi == Abi::RustCall { // TODO(cramertj)
         // RustCall pseudo-ABI untuples the last argument.
         spread_arg = Some(Local::new(arguments.len()));
     }
