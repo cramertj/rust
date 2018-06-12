@@ -239,6 +239,7 @@
 #![feature(allow_internal_unsafe)]
 #![feature(allow_internal_unstable)]
 #![feature(align_offset)]
+#![feature(arbitrary_self_types)]
 #![feature(array_error_internals)]
 #![feature(ascii_ctype)]
 #![feature(asm)]
@@ -262,6 +263,7 @@
 #![feature(fn_traits)]
 #![feature(fnbox)]
 #![feature(futures_api)]
+#![feature(generator_trait)]
 #![feature(hashmap_internals)]
 #![feature(heap_api)]
 #![feature(int_error_internals)]
@@ -410,8 +412,6 @@ pub use core::ops;
 #[stable(feature = "rust1", since = "1.0.0")]
 pub use core::ptr;
 #[stable(feature = "rust1", since = "1.0.0")]
-pub use core::raw;
-#[stable(feature = "rust1", since = "1.0.0")]
 pub use core::result;
 #[stable(feature = "rust1", since = "1.0.0")]
 pub use core::option;
@@ -547,6 +547,8 @@ pub use stdsimd::simd;
 #[stable(feature = "simd_arch", since = "1.27.0")]
 #[cfg(all(not(stage0), not(test)))]
 pub use stdsimd::arch;
+
+pub mod raw;
 
 // Include a number of private modules that exist solely to provide
 // the rustdoc documentation for primitive types. Using `include!`
