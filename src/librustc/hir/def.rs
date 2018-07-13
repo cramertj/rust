@@ -84,7 +84,7 @@ pub enum Def {
 ///       ^~~~~~~~~~~~~~  ^~~~~~~~~~~~~~~~~~~~~~~~~
 ///       base_def        unresolved_segments = 2
 /// ```
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct PathResolution {
     base_def: Def,
     unresolved_segments: usize,

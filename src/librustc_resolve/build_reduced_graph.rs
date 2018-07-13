@@ -109,144 +109,180 @@ impl<'a> Resolver<'a> {
                                         nested: bool,
                                         item: &Item,
                                         expansion: Mark) {
+
         let is_prelude = attr::contains_name(&item.attrs, "prelude_import");
         let path = &use_tree.prefix;
 
-        let mut module_path: Vec<_> = prefix.segments.iter()
+        let module_path: Vec<_> = prefix.segments.iter()
             .chain(path.segments.iter())
             .map(|seg| seg.ident)
             .collect();
 
-        match use_tree.kind {
-            ast::UseTreeKind::Simple(rename, ..) => {
-                let mut ident = use_tree.ident();
-                let mut source = module_path.pop().unwrap();
-                let mut type_ns_only = false;
+        let should_duplicate =
+            !nested &&
+            self.session.rust_2018() &&
+            if let Some(first_segment) = module_path.get(0) {
+                ![
+                    keywords::CrateRoot.name(),
+                    keywords::DollarCrate.name(),
+                    keywords::SelfValue.name(),
+                    keywords::Extern.name(),
+                ].contains(&first_segment.name) &&
+                self.extern_prelude.contains(&first_segment.name)
+            } else {
+                false
+            };
 
-                if nested {
-                    // Correctly handle `self`
-                    if source.name == keywords::SelfValue.name() {
-                        type_ns_only = true;
+        let mut helper = |mut module_path: Vec<Ident>, second_self: bool| {
+            match use_tree.kind {
+                ast::UseTreeKind::Simple(rename, ..) => {
+                    let mut ident = use_tree.ident();
+                    let mut source = module_path.pop().unwrap();
+                    let mut type_ns_only = false;
 
-                        let last_segment = *module_path.last().unwrap();
-                        if last_segment.name == keywords::CrateRoot.name() {
-                            resolve_error(
-                                self,
-                                use_tree.span,
-                                ResolutionError::
-                                SelfImportOnlyInImportListWithNonEmptyPrefix
-                            );
-                            return;
+                    if nested {
+                        // Correctly handle `self`
+                        if source.name == keywords::SelfValue.name() {
+                            type_ns_only = true;
+
+                            let last_segment = *module_path.last().unwrap();
+                            if last_segment.name == keywords::CrateRoot.name() {
+                                resolve_error(
+                                    self,
+                                    use_tree.span,
+                                    ResolutionError::
+                                    SelfImportOnlyInImportListWithNonEmptyPrefix
+                                );
+                                return;
+                            }
+
+                            // Replace `use foo::self;` with `use foo;`
+                            let _ = module_path.pop();
+                            source = last_segment;
+                            if rename.is_none() {
+                                ident = last_segment;
+                            }
+                        }
+                    } else {
+                        // Disallow `self`
+                        if source.name == keywords::SelfValue.name() {
+                            resolve_error(self,
+                                          use_tree.span,
+                                          ResolutionError::SelfImportsOnlyAllowedWithin);
                         }
 
-                        // Replace `use foo::self;` with `use foo;`
-                        let _ = module_path.pop();
-                        source = last_segment;
-                        if rename.is_none() {
-                            ident = last_segment;
-                        }
-                    }
-                } else {
-                    // Disallow `self`
-                    if source.name == keywords::SelfValue.name() {
-                        resolve_error(self,
-                                      use_tree.span,
-                                      ResolutionError::SelfImportsOnlyAllowedWithin);
-                    }
+                        // Disallow `use $crate;`
+                        if source.name == keywords::DollarCrate.name() && path.segments.len() == 1 {
+                            let crate_root = self.resolve_crate_root(source);
+                            let crate_name = match crate_root.kind {
+                                ModuleKind::Def(_, name) => name,
+                                ModuleKind::Block(..) => unreachable!(),
+                            };
+                            source.name = crate_name;
+                            if rename.is_none() {
+                                ident.name = crate_name;
+                            }
 
-                    // Disallow `use $crate;`
-                    if source.name == keywords::DollarCrate.name() && path.segments.len() == 1 {
-                        let crate_root = self.resolve_crate_root(source);
-                        let crate_name = match crate_root.kind {
-                            ModuleKind::Def(_, name) => name,
-                            ModuleKind::Block(..) => unreachable!(),
-                        };
-                        source.name = crate_name;
-                        if rename.is_none() {
-                            ident.name = crate_name;
-                        }
-
-                        self.session.struct_span_warn(item.span, "`$crate` may not be imported")
-                            .note("`use $crate;` was erroneously allowed and \
-                                   will become a hard error in a future release")
-                            .emit();
-                    }
-                }
-
-                let subclass = SingleImport {
-                    target: ident,
-                    source,
-                    result: PerNS {
-                        type_ns: Cell::new(Err(Undetermined)),
-                        value_ns: Cell::new(Err(Undetermined)),
-                        macro_ns: Cell::new(Err(Undetermined)),
-                    },
-                    type_ns_only,
-                };
-                self.add_import_directive(
-                    module_path,
-                    subclass,
-                    use_tree.span,
-                    id,
-                    root_use_tree.span,
-                    root_id,
-                    vis,
-                    expansion,
-                );
-            }
-            ast::UseTreeKind::Glob => {
-                let subclass = GlobImport {
-                    is_prelude,
-                    max_vis: Cell::new(ty::Visibility::Invisible),
-                };
-                self.add_import_directive(
-                    module_path,
-                    subclass,
-                    use_tree.span,
-                    id,
-                    root_use_tree.span,
-                    root_id,
-                    vis,
-                    expansion,
-                );
-            }
-            ast::UseTreeKind::Nested(ref items) => {
-                let prefix = ast::Path {
-                    segments: module_path.into_iter()
-                        .map(|ident| ast::PathSegment::from_ident(ident))
-                        .collect(),
-                    span: path.span,
-                };
-
-                // Ensure there is at most one `self` in the list
-                let self_spans = items.iter().filter_map(|&(ref use_tree, _)| {
-                    if let ast::UseTreeKind::Simple(..) = use_tree.kind {
-                        if use_tree.ident().name == keywords::SelfValue.name() {
-                            return Some(use_tree.span);
+                            self.session.struct_span_warn(item.span, "`$crate` may not be imported")
+                                .note("`use $crate;` was erroneously allowed and \
+                                       will become a hard error in a future release")
+                                .emit();
                         }
                     }
 
-                    None
-                }).collect::<Vec<_>>();
-                if self_spans.len() > 1 {
-                    let mut e = resolve_struct_error(self,
-                        self_spans[0],
-                        ResolutionError::SelfImportCanOnlyAppearOnceInTheList);
-
-                    for other_span in self_spans.iter().skip(1) {
-                        e.span_label(*other_span, "another `self` import appears here");
-                    }
-
-                    e.emit();
-                }
-
-                for &(ref tree, id) in items {
-                    self.build_reduced_graph_for_use_tree(
-                        root_use_tree, root_id, tree, id, vis, &prefix, true, item, expansion
+                    let subclass = SingleImport {
+                        target: ident,
+                        source,
+                        result: PerNS {
+                            type_ns: Cell::new(Err(Undetermined)),
+                            value_ns: Cell::new(Err(Undetermined)),
+                            macro_ns: Cell::new(Err(Undetermined)),
+                        },
+                        type_ns_only,
+                    };
+                    self.add_import_directive(
+                        module_path,
+                        subclass,
+                        use_tree.span,
+                        id,
+                        root_use_tree.span,
+                        root_id,
+                        vis,
+                        expansion,
+                        second_self,
                     );
                 }
+                ast::UseTreeKind::Glob => {
+                    let subclass = GlobImport {
+                        is_prelude,
+                        max_vis: Cell::new(ty::Visibility::Invisible),
+                    };
+                    self.add_import_directive(
+                        module_path,
+                        subclass,
+                        use_tree.span,
+                        id,
+                        root_use_tree.span,
+                        root_id,
+                        vis,
+                        expansion,
+                        second_self,
+                    );
+                }
+                ast::UseTreeKind::Nested(ref items) => {
+                    let prefix = ast::Path {
+                        segments: module_path.into_iter()
+                            .map(|ident| ast::PathSegment::from_ident(ident))
+                            .collect(),
+                        span: path.span,
+                    };
+
+                    // Ensure there is at most one `self` in the list
+                    let self_spans = items.iter().filter_map(|&(ref use_tree, _)| {
+                        if let ast::UseTreeKind::Simple(..) = use_tree.kind {
+                            if use_tree.ident().name == keywords::SelfValue.name() {
+                                return Some(use_tree.span);
+                            }
+                        }
+
+                        None
+                    }).collect::<Vec<_>>();
+                    if self_spans.len() > 1 {
+                        let mut e = resolve_struct_error(self,
+                            self_spans[0],
+                            ResolutionError::SelfImportCanOnlyAppearOnceInTheList);
+
+                        for other_span in self_spans.iter().skip(1) {
+                            e.span_label(*other_span, "another `self` import appears here");
+                        }
+
+                        e.emit();
+                    }
+
+                    for &(ref tree, id) in items {
+                        self.build_reduced_graph_for_use_tree(
+                            root_use_tree, root_id, tree, id, vis, &prefix, true, item, expansion
+                        );
+                    }
+                }
             }
-        }
+        };
+
+        if should_duplicate {
+            // Desugar from `use ident::suffix;` into
+            // `use self::ident::suffix;` and
+            // `use extern::ident::suffix;`
+            let mut self_module_path = module_path.clone();
+            let mut extern_module_path = module_path;
+            let self_ident = Ident { name: keywords::SelfValue.name(), span: use_tree.span };
+            let extern_ident = Ident { name: keywords::Extern.name(), span: use_tree.span };
+            self_module_path.insert(0, self_ident);
+            extern_module_path.insert(0, extern_ident);
+            helper(self_module_path, true);
+            helper(extern_module_path, true);
+        } else {
+            helper(module_path, false)
+        };
     }
 
     /// Constructs the reduced graph for one item.
@@ -293,6 +329,7 @@ impl<'a> Resolver<'a> {
                     vis: Cell::new(vis),
                     expansion,
                     used: Cell::new(used),
+                    second_self: false,
                 });
                 self.potentially_unused_imports.push(directive);
                 let imported_binding = self.import(binding, directive);
@@ -669,6 +706,7 @@ impl<'a> Resolver<'a> {
             vis: Cell::new(ty::Visibility::Restricted(DefId::local(CRATE_DEF_INDEX))),
             expansion,
             used: Cell::new(false),
+            second_self: false,
         });
 
         if let Some(span) = legacy_imports.import_all {

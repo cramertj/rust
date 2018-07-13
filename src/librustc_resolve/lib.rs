@@ -153,7 +153,13 @@ enum ResolutionError<'a> {
     /// error E0431: `self` import can only appear in an import list with a non-empty prefix
     SelfImportOnlyInImportListWithNonEmptyPrefix,
     /// error E0432: unresolved import
-    UnresolvedImport(Option<(Span, &'a str, &'a str)>),
+    UnresolvedImport {
+        name: Option<(Span, String, String)>,
+        // Whether or not this unresolved import had indeterminate resolution,
+        // possibly the result of desugaring `use foo;` into a pair of
+        // `use extern::foo;` and `use self::foo;` in edition 2018
+        indet: bool,
+    },
     /// error E0433: failed to resolve
     FailedToResolve(&'a str),
     /// error E0434: can't capture dynamic environment in a fn item
@@ -351,12 +357,14 @@ fn resolve_struct_error<'sess, 'a>(resolver: &'sess Resolver,
             err.span_label(span, "can only appear in an import list with a non-empty prefix");
             err
         }
-        ResolutionError::UnresolvedImport(name) => {
-            let (span, msg) = match name {
-                Some((sp, n, _)) => (sp, format!("unresolved import `{}`", n)),
+        ResolutionError::UnresolvedImport { name, indet } => {
+            let (span, msg) = match &name {
+                Some((sp, n, _)) => (*sp, format!("unresolved import `{}`", n)),
                 None => (span, "unresolved import".to_owned()),
             };
-            let mut err = struct_span_err!(resolver.session, span, E0432, "{}", msg);
+            let mut err = struct_span_err!(
+                resolver.session, span, E0432, "{}, indet: {}", msg, indet
+            );
             if let Some((_, _, p)) = name {
                 err.span_label(span, p);
             }
@@ -4283,7 +4291,11 @@ impl<'a> Resolver<'a> {
     fn record_def(&mut self, node_id: NodeId, resolution: PathResolution) {
         debug!("(recording def) recording {:?} for {}", resolution, node_id);
         if let Some(prev_res) = self.def_map.insert(node_id, resolution) {
-            panic!("path resolved multiple times ({:?} before, {:?} now)", prev_res, resolution);
+            if resolution != prev_res {
+                self.session.err(
+                    &format!("path resolved to two different entities - {:?} and {:?}",
+                             prev_res, resolution));
+            }
         }
     }
 

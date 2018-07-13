@@ -89,6 +89,11 @@ pub struct ImportDirective<'a> {
     pub vis: Cell<ty::Visibility>,
     pub expansion: Mark,
     pub used: Cell<bool>,
+
+    /// Whether or not the import has been duplicated into two separate `ImportDirective`s
+    /// as the result of desugaring. This is used to prevent reporting errors if one
+    /// import resolves successfully but the other does not.
+    pub second_self: bool,
 }
 
 impl<'a> ImportDirective<'a> {
@@ -327,7 +332,8 @@ impl<'a> Resolver<'a> {
                                 root_span: Span,
                                 root_id: NodeId,
                                 vis: ty::Visibility,
-                                expansion: Mark) {
+                                expansion: Mark,
+                                second_self: bool) {
         let current_module = self.current_module;
         let directive = self.arenas.alloc_import_directive(ImportDirective {
             parent: current_module,
@@ -341,6 +347,7 @@ impl<'a> Resolver<'a> {
             vis: Cell::new(vis),
             expansion,
             used: Cell::new(false),
+            second_self,
         });
 
         self.indeterminate_imports.push(directive);
@@ -417,6 +424,16 @@ impl<'a> Resolver<'a> {
                         resolution.shadows_glob = Some(old_binding);
                     }
                 } else {
+                    if let (&NameBindingKind::Import { ref directive, .. },
+                            &NameBindingKind::Import { directive: ref old_directive, .. })
+                                = (&binding.kind, &old_binding.kind)
+                    {
+                        if directive.id == old_directive.id
+                            && binding.def() == old_binding.def()
+                        {
+                            return Ok(());
+                        }
+                    }
                     return Err(old_binding);
                 }
             } else {
@@ -546,6 +563,18 @@ impl<'a, 'b:'a> ImportResolver<'a, 'b> {
 
         let mut errors = false;
         let mut seen_spans = FxHashSet();
+        // IDs of paths that have been successfully resolved.
+        // When `use foo;` is desugared to `use extern::foo;` and `use self::foo;`,
+        // only one should resolve, so we save failed resolution errors and only report
+        // an error if no resolution was successfull for the matching ID.
+        //
+        // TODO: what is the right behavior here in the case of `use_nested_groups`? seems funky
+        // e.g. `use foo::{bar, baz};` shouldn't resolve to one `use extern::foo::bar;` and one
+        // `use extern::foo::baz;`, but `use {foo::bar, foo::baz};` could, potentially?
+        //
+        // The current code definitely *does not* handle this case correctly.
+        let mut ok_ids = FxHashSet();
+        let mut stashed_errors = vec![];
         for i in 0 .. self.determined_imports.len() {
             let import = self.determined_imports[i];
             if let Some((span, err)) = self.finalize_import(import) {
@@ -564,14 +593,25 @@ impl<'a, 'b:'a> ImportResolver<'a, 'b> {
                 // If the error is a single failed import then create a "fake" import
                 // resolution for it so that later resolve stages won't complain.
                 self.import_dummy_binding(import);
-                if !seen_spans.contains(&span) {
+                if !seen_spans.contains(&span) && !import.second_self {
                     let path = import_path_to_string(&import.module_path[..],
                                                      &import.subclass,
                                                      span);
-                    let error = ResolutionError::UnresolvedImport(Some((span, &path, &err)));
-                    resolve_error(self.resolver, span, error);
+                    let error = ResolutionError::UnresolvedImport {
+                        name: Some((span, path, err)),
+                        indet: false,
+                    };
+                    stashed_errors.push((import.id, span, error));
                     seen_spans.insert(span);
                 }
+            } else {
+                ok_ids.insert(import.id);
+            }
+        }
+
+        for error in stashed_errors {
+            if !ok_ids.contains(&error.0) {
+                resolve_error(self.resolver, error.1, error.2);
             }
         }
 
@@ -579,8 +619,13 @@ impl<'a, 'b:'a> ImportResolver<'a, 'b> {
         // to avoid generating multiple errors on the same import.
         if !errors {
             if let Some(import) = self.indeterminate_imports.iter().next() {
-                let error = ResolutionError::UnresolvedImport(None);
-                resolve_error(self.resolver, import.span, error);
+                if !import.second_self {
+                    let error = ResolutionError::UnresolvedImport {
+                        name: None,
+                        indet: true,
+                    };
+                    resolve_error(self.resolver, import.span, error);
+                }
             }
         }
     }
