@@ -11,6 +11,10 @@ LL | trait A<T>: std::ops::Add<Self> + Sized {}
    |             ^^^^^^^^^^^^^^^^^^^ ...because it uses `Self` as a type parameter
 LL | trait B<T>: A<T> {}
    |       - this trait cannot be made into an object...
+help: consider using an opaque type instead
+   |
+LL | trait C<T>: A<impl B<T, Output = usize>> {}
+   |               ~~~~
 
 error[E0038]: the trait `B` cannot be made into an object
   --> $DIR/issue-38404.rs:3:15
@@ -26,6 +30,10 @@ LL | trait A<T>: std::ops::Add<Self> + Sized {}
 LL | trait B<T>: A<T> {}
    |       - this trait cannot be made into an object...
    = note: duplicate diagnostic emitted due to `-Z deduplicate-diagnostics=no`
+help: consider using an opaque type instead
+   |
+LL | trait C<T>: A<impl B<T, Output = usize>> {}
+   |               ~~~~
 
 error[E0038]: the trait `B` cannot be made into an object
   --> $DIR/issue-38404.rs:3:15
@@ -41,6 +49,10 @@ LL | trait A<T>: std::ops::Add<Self> + Sized {}
 LL | trait B<T>: A<T> {}
    |       - this trait cannot be made into an object...
    = note: duplicate diagnostic emitted due to `-Z deduplicate-diagnostics=no`
+help: consider using an opaque type instead
+   |
+LL | trait C<T>: A<impl B<T, Output = usize>> {}
+   |               ~~~~
 
 error: aborting due to 3 previous errors
 

@@ -608,18 +608,18 @@ fn attempt_dyn_to_impl_suggestion(tcx: TyCtxt<'_>, hir_id: Option<hir::HirId>, e
     let Some(hir_id) = hir_id else { return };
     let hir::Node::Ty(ty) = tcx.hir_node(hir_id) else { return };
     let hir::TyKind::TraitObject([trait_ref, ..], ..) = ty.kind else { return };
-    // Get the top-most parent element which is a type.
-    let parent_ty_hir_id = tcx
-        .hir()
-        .parent_iter(hir_id)
-        .take_while(|(_id, node)| matches!(node, hir::Node::Ty(_)))
-        .last()
-        .map(|(id, _node)| id)
-        .unwrap_or(hir_id);
-    if tcx.parent_hir_node(parent_ty_hir_id).fn_sig().is_none() {
-        // Do not suggest `impl Trait` when dealing with things like super-traits.
-        return;
-    }
+    // // Get the top-most parent element which is a type.
+    // let parent_ty_hir_id = tcx
+    //     .hir()
+    //     .parent_iter(hir_id)
+    //     .take_while(|(_id, node)| matches!(node, hir::Node::Ty(_)))
+    //     .last()
+    //     .map(|(id, _node)| id)
+    //     .unwrap_or(hir_id);
+    // if tcx.parent_hir_node(parent_ty_hir_id).fn_sig().is_none() {
+    //     // Do not suggest `impl Trait` when dealing with things like super-traits.
+    //     return;
+    // }
     err.span_suggestion_verbose(
         ty.span.until(trait_ref.span),
         "consider using an opaque type instead",

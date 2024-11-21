@@ -11,6 +11,10 @@ LL | trait Map: MapLookup<<Self as Map>::Key> {
    |       ---  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ ...because it uses `Self` as a type parameter
    |       |
    |       this trait cannot be made into an object...
+help: consider using an opaque type instead
+   |
+LL |         as &impl Map<Key=u32,MapValue=u32>;
+   |             ~~~~
 
 error: aborting due to 1 previous error
 
