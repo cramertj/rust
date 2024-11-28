@@ -2606,6 +2606,8 @@ written to standard error output)"),
     #[rustc_lint_opt_deny_field_access("use `Session::unstable_options` instead of this field")]
     unstable_options: bool = (false, parse_no_value, [UNTRACKED],
         "adds unstable command line options to rustc interface (default: no)"),
+    unused_pub_in_bin: bool = (false, parse_bool, [TRACKED],
+        "report unused items as unused even if they are `pub` when compiling a non-rustlib target"),
     use_ctors_section: Option<bool> = (None, parse_opt_bool, [TRACKED],
         "use legacy .ctors section for initializers rather than .init_array"),
     use_sync_unwind: Option<bool> = (None, parse_opt_bool, [TRACKED],

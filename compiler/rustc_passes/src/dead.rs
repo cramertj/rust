@@ -19,6 +19,7 @@ use rustc_middle::middle::privacy::Level;
 use rustc_middle::query::Providers;
 use rustc_middle::ty::{self, TyCtxt};
 use rustc_middle::{bug, span_bug};
+use rustc_session::config::CrateType;
 use rustc_session::lint::builtin::DEAD_CODE;
 use rustc_session::lint::{self, LintExpectationId};
 use rustc_span::{Symbol, sym};
@@ -858,20 +859,45 @@ fn create_and_seed_worklist(
     // see `MarkSymbolVisitor::struct_constructors`
     let mut unsolved_impl_item = Vec::new();
     let mut struct_constructors = Default::default();
-    let mut worklist = effective_visibilities
-        .iter()
-        .filter_map(|(&id, effective_vis)| {
-            effective_vis
-                .is_public_at_level(Level::Reachable)
-                .then_some(id)
-                .map(|id| (id, ComesFromAllowExpect::No))
-        })
-        // Seed entry point
-        .chain(
-            tcx.entry_fn(())
-                .and_then(|(def_id, _)| def_id.as_local().map(|id| (id, ComesFromAllowExpect::No))),
-        )
-        .collect::<Vec<_>>();
+
+    // Whether to consider `pub` items automatically used.
+    //
+    // For example, a `pub fn foo() { .. }` that is unused inside a crate
+    // that is being compiled as executable-only should not be considered used.
+    // Despite its visibility, it can never be acccessed by another crate.
+    //
+    // Similarly, non-Rust libraries (e.g. staticlib) only "real" public
+    // symbols are their "extern" symbols.
+    //
+    // We also consider all items used when compiling test crates, as the "real"
+    // compilation target type isn't known.
+    let consider_pub_items_used = !tcx.sess.opts.unstable_opts.unused_pub_in_bin
+        || tcx.sess.is_test_crate()
+        || tcx.crate_types().iter().any(|crate_type| match crate_type {
+            CrateType::Executable
+            | CrateType::Cdylib
+            | CrateType::ProcMacro
+            | CrateType::Staticlib => false,
+            CrateType::Dylib | CrateType::Rlib => true,
+        });
+
+    let entrypoints = tcx
+        .entry_fn(())
+        .and_then(|(def_id, _)| def_id.as_local().map(|id| (id, ComesFromAllowExpect::No)));
+    let mut worklist: Vec<_> = if consider_pub_items_used {
+        effective_visibilities
+            .iter()
+            .filter_map(|(&id, effective_vis)| {
+                effective_vis
+                    .is_public_at_level(Level::Reachable)
+                    .then_some(id)
+                    .map(|id| (id, ComesFromAllowExpect::No))
+            })
+            .chain(entrypoints)
+            .collect()
+    } else {
+        entrypoints.into_iter().collect()
+    };
 
     let crate_items = tcx.hir_crate_items(());
     for id in crate_items.free_items() {
