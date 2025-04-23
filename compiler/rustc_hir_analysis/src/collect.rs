@@ -760,7 +760,7 @@ fn lower_item(tcx: TyCtxt<'_>, item_id: hir::ItemId) {
         }
 
         hir::ItemKind::TyProvider { .. } | hir::ItemKind::ProvidedTy { .. } => {
-            // TODO(ecdysis) I'm not sure what, if any, logic should go here.
+            // FIXME(ecdysis) I'm not sure what, if any, logic should go here.
             // Probably we want all the "interesting" logic of making sure
             // analysis is successful to be run in the provider itself.
             //

@@ -505,9 +505,9 @@ impl<'a> PathSource<'a> {
     }
 
     pub(crate) fn is_expected(self, res: Res) -> bool {
-        // TODO(ecdysis) We don't know ahead of time whether
+        // FIXME(ecdysis) We don't know ahead of time whether
         // provided "types" are actually types or values (functions, consts).
-        // TODO rename :)
+        // FIXME rename :)
         if matches!(res, Res::Def(DefKind::ProvidedTy | DefKind::TyProvider, _)) {
             return true;
         }

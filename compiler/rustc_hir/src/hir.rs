@@ -4241,7 +4241,7 @@ pub enum ItemKind<'hir> {
 #[derive(Debug, Clone, Copy, HashStable_Generic)]
 pub struct ProvidedTyRemainingPathSegment<'hir> {
     pub ident: Ident,
-    // TODO(ecdysis) unused for now, TODO use in diagnostics.
+    // FIXME(ecdysis) unused for now, FIXME use in diagnostics.
     #[stable_hasher(ignore)]
     pub hir_id: HirId,
     pub args: Option<&'hir GenericArgs<'hir>>,

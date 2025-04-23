@@ -684,7 +684,7 @@ impl<'a> State<'a> {
                 self.end();
             }
             hir::ItemKind::ProvidedTy { provider_def_id: _, generic_args, remaining_path } => {
-                // TODO(ecdysis) print some kind of identifier here describing the original provider def.
+                // FIXME(ecdysis) print some kind of identifier here describing the original provider def.
                 self.head("provided");
                 if let Some(args) = generic_args {
                     self.print_generic_args(args, /*colons_before_params=*/ true);

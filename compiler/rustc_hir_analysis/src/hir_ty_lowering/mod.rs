@@ -2110,7 +2110,7 @@ impl<'tcx> dyn HirTyLowerer<'tcx> + '_ {
                 self.lower_path_segment(span, did, path.segments.last().unwrap())
             }
             Res::Def(DefKind::ProvidedTy, def_id) => {
-                // TODO(ecdysis) lower to the actual expanded type
+                // FIXME(ecdysis) lower to the actual expanded type
                 let mut err =
                     self.dcx().struct_span_err(path.span, "provided types are not yet supported");
                 if let Some(hir::Node::Item(&hir::Item {
@@ -2123,7 +2123,7 @@ impl<'tcx> dyn HirTyLowerer<'tcx> + '_ {
                 Ty::new_error(tcx, reported)
             }
             Res::Def(DefKind::TyProvider, def_id) => {
-                // TODO(ecdysis) ???
+                // FIXME(ecdysis) ???
                 let mut err =
                     self.dcx().struct_span_err(path.span, "providers cannot be used as types");
                 if let Some(hir::Node::Item(&hir::Item {
@@ -2479,7 +2479,7 @@ impl<'tcx> dyn HirTyLowerer<'tcx> + '_ {
                 | DefKind::Ctor(CtorOf::Struct, CtorKind::Fn)
                 | DefKind::OpaqueTy
                 | DefKind::TyAlias
-                // TODO(ecdysis) allow type providers to provide consts?
+                // FIXME(ecdysis) allow type providers to provide consts?
                 | DefKind::TyProvider
                 | DefKind::ProvidedTy
                 | DefKind::TraitAlias
@@ -2776,7 +2776,7 @@ impl<'tcx> dyn HirTyLowerer<'tcx> + '_ {
             }
             hir::TyKind::Err(guar) => Ty::new_error(tcx, *guar),
             hir::TyKind::Provider(hir::ProviderTy { hir_id: _, def_id: _, span, provider_id }) => {
-                // TODO(ecdysis): this doesn't make sense. We need to replace
+                // FIXME(ecdysis): this doesn't make sense. We need to replace
                 // the `SomeProviderTy<i32>` with a concrete type before we
                 // get here.
                 let guar = self

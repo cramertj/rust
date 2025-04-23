@@ -6,6 +6,6 @@ extern crate rustc_driver;
 use rustc_driver::run_compiler;
 
 fn main() {
-    // TODO(ecdysis)
+    // FIXME(ecdysis)
     println!("Hello, world!");
 }

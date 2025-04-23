@@ -659,7 +659,7 @@ impl<'tcx> Visitor<'tcx> for EmbargoVisitor<'tcx> {
             hir::ItemKind::Use(..)
             | hir::ItemKind::ExternCrate(..)
             | hir::ItemKind::GlobalAsm { .. }
-            // TODO(ecdysis): This can actually have nested items, but not until
+            // FIXME(ecdysis): This can actually have nested items, but not until
             // after it is resolved by the plugin.
             | hir::ItemKind::TyProvider { .. } | hir::ItemKind::ProvidedTy { .. } => {}
             // The interface is empty, and all nested items are processed by `visit_item`.

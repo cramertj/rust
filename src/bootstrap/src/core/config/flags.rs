@@ -403,7 +403,7 @@ pub enum Subcommand {
         no_capture: bool,
     },
 
-    // TODO(ecdysis)
+    // FIXME(ecdysis)
     /// Build a target using Ecdysis.
     Ecdysis {},
 

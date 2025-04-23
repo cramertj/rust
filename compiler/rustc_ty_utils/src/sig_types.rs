@@ -120,7 +120,7 @@ pub fn walk_types<'tcx, V: SpannedTypeVisitor<'tcx>>(
         | DefKind::TyProvider => {
             span_bug!(
                 tcx.def_span(item),
-                // TODO(ecdysis) walk types?
+                // FIXME(ecdysis) walk types?
                 "`walk_types` on {kind:?} is not yet supported"
             )
         }

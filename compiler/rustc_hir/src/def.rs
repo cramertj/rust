@@ -290,7 +290,7 @@ impl DefKind {
             }
 
             // ProvidedTys are constructed types without a name.
-            // TODO(ecdysis) should we manufacture a name for these?
+            // FIXME(ecdysis) should we manufacture a name for these?
             DefKind::ProvidedTy => DefPathData::AnonAssocTy,
 
             // It's not exactly an anon const, but wrt DefPathData, there

@@ -1140,7 +1140,7 @@ fn should_encode_variances<'tcx>(tcx: TyCtxt<'tcx>, def_id: DefId, def_kind: Def
         | DefKind::GlobalAsm
         | DefKind::Closure
         | DefKind::ExternCrate
-        // TODO(ecdysis): AFAICT we shouldn't allow variance
+        // FIXME(ecdysis): AFAICT we shouldn't allow variance
         | DefKind::TyProvider
         | DefKind::ProvidedTy
         | DefKind::SyntheticCoroutineBody => false,
@@ -1180,7 +1180,7 @@ fn should_encode_generics(def_kind: DefKind) -> bool {
         | DefKind::Use
         | DefKind::LifetimeParam
         | DefKind::GlobalAsm
-        // TODO(ecdysis): these shouldn't allow generics
+        // FIXME(ecdysis): these shouldn't allow generics
         | DefKind::TyProvider
         | DefKind::ProvidedTy
         | DefKind::ExternCrate => false,

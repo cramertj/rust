@@ -484,7 +484,7 @@ impl<'a, 'hir> LoweringContext<'a, 'hir> {
                 return None;
             }
         };
-        // TODO(ecdysis) obv this isn't literally an ExternFnParam.
+        // FIXME(ecdysis) obv this isn't literally an ExternFnParam.
         // Probably a new variant needs to be added to `ImplTraitPosition`.
         Some(
             self.lower_angle_bracketed_parameter_data(

@@ -1030,7 +1030,7 @@ impl<'a> Builder<'a> {
                 // Run run-make last, since these won't pass without make on Windows
                 test::RunMake,
             ),
-            // TODO(ecdysis)
+            // FIXME(ecdysis)
             Kind::Ecdysis => vec![],
             Kind::Miri => describe!(test::Crate),
             Kind::Bench => describe!(test::Crate, test::CrateLibrustc),
