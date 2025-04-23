@@ -140,10 +140,10 @@ impl Deprecation {
 
 #[derive(Clone, Debug, HashStable_Generic, Encodable, Decodable, PrintAttribute)]
 pub struct Provider {
-  /// User-provided string `id` value.
-  pub provider_id: Symbol,
-  /// Span of the `#[provider(id = "...")]` attribute
-  pub span: Span,
+    /// User-provided string `id` value.
+    pub provider_id: Symbol,
+    /// Span of the `#[provider(id = "...")]` attribute
+    pub span: Span,
 }
 
 /// Represent parsed, *built in*, inert attributes.

@@ -18,7 +18,9 @@ use rustc_ast_pretty::pprust::state::MacHeader;
 use rustc_ast_pretty::pprust::{Comments, PrintState};
 use rustc_attr_data_structures::{AttributeKind, PrintAttribute};
 use rustc_hir::{
-    BindingMode, ByRef, ConstArgKind, GenericArg, GenericBound, GenericParam, GenericParamKind, HirId, ImplicitSelfKind, LifetimeParamKind, Node, PatKind, PreciseCapturingArg, ProvidedTyRemainingPathSegment, RangeEnd, Term, TyPatKind
+    BindingMode, ByRef, ConstArgKind, GenericArg, GenericBound, GenericParam, GenericParamKind,
+    HirId, ImplicitSelfKind, LifetimeParamKind, Node, PatKind, PreciseCapturingArg,
+    ProvidedTyRemainingPathSegment, RangeEnd, Term, TyPatKind,
 };
 use rustc_span::source_map::SourceMap;
 use rustc_span::{FileName, Ident, Span, Symbol, kw};
@@ -670,9 +672,12 @@ impl<'a> State<'a> {
                 self.end(); // end the outer ibox
             }
             hir::ItemKind::TyProvider { ident, provider_id } => {
-                self.print_attribute_inline(&hir::Attribute::Parsed(AttributeKind::Provider(
-                  rustc_attr_data_structures::Provider { provider_id, span: item.span }
-                )), ast::AttrStyle::Outer);
+                self.print_attribute_inline(
+                    &hir::Attribute::Parsed(AttributeKind::Provider(
+                        rustc_attr_data_structures::Provider { provider_id, span: item.span },
+                    )),
+                    ast::AttrStyle::Outer,
+                );
                 self.head("type");
                 self.print_ident(ident);
                 self.word(";");
@@ -682,13 +687,13 @@ impl<'a> State<'a> {
                 // TODO(ecdysis) print some kind of identifier here describing the original provider def.
                 self.head("provided");
                 if let Some(args) = generic_args {
-                    self.print_generic_args(args, /*colons_before_params=*/true);
+                    self.print_generic_args(args, /*colons_before_params=*/ true);
                 }
                 for &ProvidedTyRemainingPathSegment { ident, hir_id: _, args } in remaining_path {
                     self.word("::");
                     self.print_ident(ident);
                     if let Some(args) = args {
-                        self.print_generic_args(args, /*colons_before_params=*/true);
+                        self.print_generic_args(args, /*colons_before_params=*/ true);
                     }
                 }
                 self.end();

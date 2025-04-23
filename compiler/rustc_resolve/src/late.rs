@@ -509,7 +509,7 @@ impl<'a> PathSource<'a> {
         // provided "types" are actually types or values (functions, consts).
         // TODO rename :)
         if matches!(res, Res::Def(DefKind::ProvidedTy | DefKind::TyProvider, _)) {
-          return true;
+            return true;
         }
         match self {
             PathSource::DefineOpaques => {

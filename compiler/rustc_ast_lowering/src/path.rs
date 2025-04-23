@@ -12,8 +12,6 @@ use rustc_span::{BytePos, DUMMY_SP, DesugaringKind, Ident, Span, Symbol, sym};
 use smallvec::{SmallVec, smallvec};
 use tracing::{debug, instrument};
 
-use crate::errors::ProviderTyNoParenthesizedGenerics;
-
 use super::errors::{
     AsyncBoundNotOnTrait, AsyncBoundOnlyForFnTraits, BadReturnTypeNotation,
     GenericTypeWithParentheses, RTNSuggestion, UseAngleBrackets,
@@ -22,6 +20,7 @@ use super::{
     AllowReturnTypeNotation, GenericArgsCtor, GenericArgsMode, ImplTraitContext, ImplTraitPosition,
     LifetimeRes, LoweringContext, ParamMode, ResolverAstLoweringExt,
 };
+use crate::errors::ProviderTyNoParenthesizedGenerics;
 
 impl<'a, 'hir> LoweringContext<'a, 'hir> {
     #[instrument(level = "trace", skip(self))]
@@ -46,36 +45,40 @@ impl<'a, 'hir> LoweringContext<'a, 'hir> {
         // that follows will be transformed into a provided type.
         let mut segments_iter = p.segments.iter();
         while let Some(segment) = segments_iter.next() {
-            let Some(partial) = self.resolver.get_partial_res(segment.id) else {
-              continue
-            };
+            let Some(partial) = self.resolver.get_partial_res(segment.id) else { continue };
             let Some(Res::Def(DefKind::TyProvider, provider_def_id)) = partial.full_res() else {
-              continue
+                continue;
             };
 
             let parent_def_id = self.current_hir_id_owner.def_id;
             let node_id = self.next_node_id();
-            let provided_ty_id = self.create_def(parent_def_id, node_id, /*name=*/None, DefKind::ProvidedTy, p.span);
+            let provided_ty_id = self.create_def(
+                parent_def_id,
+                node_id,
+                /*name=*/ None,
+                DefKind::ProvidedTy,
+                p.span,
+            );
 
             // Register the `provided_ty` as an item.
             self.with_hir_id_owner(node_id, |this| {
-                let generic_args =
-                    this.lower_provider_ty_generics(&segment.args);
+                let generic_args = this.lower_provider_ty_generics(&segment.args);
 
-                let remaining_path = this.arena.alloc_from_iter(segments_iter.map(|trailing_segment| {
-                    hir::ProvidedTyRemainingPathSegment {
-                        ident: trailing_segment.ident,
-                        hir_id: this.lower_node_id(trailing_segment.id),
-                        args: this.lower_provider_ty_generics(&trailing_segment.args),
-                    }
-                }));
+                let remaining_path =
+                    this.arena.alloc_from_iter(segments_iter.map(|trailing_segment| {
+                        hir::ProvidedTyRemainingPathSegment {
+                            ident: trailing_segment.ident,
+                            hir_id: this.lower_node_id(trailing_segment.id),
+                            args: this.lower_provider_ty_generics(&trailing_segment.args),
+                        }
+                    }));
 
                 let item = hir::Item {
                     owner_id: this.owner_id(node_id),
                     kind: hir::ItemKind::ProvidedTy {
-                      provider_def_id,
-                      generic_args,
-                      remaining_path,
+                        provider_def_id,
+                        generic_args,
+                        remaining_path,
                     },
                     span: segment.span(),
                     // FIXME(ecdysis): What vis_span should be provided here?
@@ -84,11 +87,14 @@ impl<'a, 'hir> LoweringContext<'a, 'hir> {
                 hir::OwnerNode::Item(this.arena.alloc(item))
             });
 
-            return hir::QPath::Resolved(None, self.arena.alloc(hir::Path {
-                span: p.span,
-                res: Res::Def(DefKind::ProvidedTy, provided_ty_id.into()),
-                segments: &[],
-            }));
+            return hir::QPath::Resolved(
+                None,
+                self.arena.alloc(hir::Path {
+                    span: p.span,
+                    res: Res::Def(DefKind::ProvidedTy, provided_ty_id.into()),
+                    segments: &[],
+                }),
+            );
         }
 
         let partial_res =
@@ -466,24 +472,30 @@ impl<'a, 'hir> LoweringContext<'a, 'hir> {
         }
     }
 
-    fn lower_provider_ty_generics(&mut self, generics: &Option<P<GenericArgs>>) -> Option<&'hir hir::GenericArgs<'hir>> {
+    fn lower_provider_ty_generics(
+        &mut self,
+        generics: &Option<P<GenericArgs>>,
+    ) -> Option<&'hir hir::GenericArgs<'hir>> {
         let data = match generics.as_deref()? {
             GenericArgs::AngleBracketed(data) => data,
-            &GenericArgs::Parenthesized(ParenthesizedArgs { span, .. }) |
-            &GenericArgs::ParenthesizedElided(span) => {
-              self.dcx().emit_err(ProviderTyNoParenthesizedGenerics { span });
-              return None;
+            &GenericArgs::Parenthesized(ParenthesizedArgs { span, .. })
+            | &GenericArgs::ParenthesizedElided(span) => {
+                self.dcx().emit_err(ProviderTyNoParenthesizedGenerics { span });
+                return None;
             }
         };
         // TODO(ecdysis) obv this isn't literally an ExternFnParam.
         // Probably a new variant needs to be added to `ImplTraitPosition`.
-        Some(self.lower_angle_bracketed_parameter_data(
-          data, ParamMode::Explicit,
-          ImplTraitContext::Disallowed(ImplTraitPosition::ExternFnParam)
-        ).0.into_generic_args(self))
+        Some(
+            self.lower_angle_bracketed_parameter_data(
+                data,
+                ParamMode::Explicit,
+                ImplTraitContext::Disallowed(ImplTraitPosition::ExternFnParam),
+            )
+            .0
+            .into_generic_args(self),
+        )
     }
-
-
 
     fn maybe_insert_elided_lifetimes_in_path(
         &mut self,

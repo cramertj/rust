@@ -53,7 +53,9 @@ use tracing::{debug, instrument};
 
 use self::errors::assoc_tag_str;
 use crate::check::check_abi_fn_ptr;
-use crate::errors::{AmbiguousLifetimeBound, BadReturnTypeNotation, NoVariantNamed, UnresolvedProviderTy};
+use crate::errors::{
+    AmbiguousLifetimeBound, BadReturnTypeNotation, NoVariantNamed, UnresolvedProviderTy,
+};
 use crate::hir_ty_lowering::errors::{GenericsArgsErrExtend, prohibit_assoc_item_constraint};
 use crate::hir_ty_lowering::generics::{check_generic_arg_count, lower_generic_args};
 use crate::middle::resolve_bound_vars as rbv;
@@ -2109,13 +2111,10 @@ impl<'tcx> dyn HirTyLowerer<'tcx> + '_ {
             }
             Res::Def(DefKind::ProvidedTy, def_id) => {
                 // TODO(ecdysis) lower to the actual expanded type
-                let mut err = self.dcx().struct_span_err(
-                    path.span,
-                    "provided types are not yet supported",
-                );
+                let mut err =
+                    self.dcx().struct_span_err(path.span, "provided types are not yet supported");
                 if let Some(hir::Node::Item(&hir::Item {
-                    kind: hir::ItemKind::Impl(impl_),
-                    ..
+                    kind: hir::ItemKind::Impl(impl_), ..
                 })) = tcx.hir_get_if_local(def_id)
                 {
                     err.span_note(impl_.self_ty.span, "not yet supported");
@@ -2125,13 +2124,10 @@ impl<'tcx> dyn HirTyLowerer<'tcx> + '_ {
             }
             Res::Def(DefKind::TyProvider, def_id) => {
                 // TODO(ecdysis) ???
-                let mut err = self.dcx().struct_span_err(
-                    path.span,
-                    "providers cannot be used as types",
-                );
+                let mut err =
+                    self.dcx().struct_span_err(path.span, "providers cannot be used as types");
                 if let Some(hir::Node::Item(&hir::Item {
-                    kind: hir::ItemKind::Impl(impl_),
-                    ..
+                    kind: hir::ItemKind::Impl(impl_), ..
                 })) = tcx.hir_get_if_local(def_id)
                 {
                     err.span_note(impl_.self_ty.span, "provider, not a type");
@@ -2779,16 +2775,13 @@ impl<'tcx> dyn HirTyLowerer<'tcx> + '_ {
                 pat_ty
             }
             hir::TyKind::Err(guar) => Ty::new_error(tcx, *guar),
-            hir::TyKind::Provider(hir::ProviderTy {
-              hir_id: _,
-              def_id: _,
-              span,
-              provider_id
-            }) => {
+            hir::TyKind::Provider(hir::ProviderTy { hir_id: _, def_id: _, span, provider_id }) => {
                 // TODO(ecdysis): this doesn't make sense. We need to replace
                 // the `SomeProviderTy<i32>` with a concrete type before we
                 // get here.
-                let guar = self.dcx().emit_err(UnresolvedProviderTy { span: *span, provider_id: *provider_id });
+                let guar = self
+                    .dcx()
+                    .emit_err(UnresolvedProviderTy { span: *span, provider_id: *provider_id });
                 Ty::new_error(tcx, guar)
             }
         };

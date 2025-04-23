@@ -4211,10 +4211,10 @@ pub enum ItemKind<'hir> {
     TyAlias(Ident, &'hir Ty<'hir>, &'hir Generics<'hir>),
     /// A type provider from a plugin.
     TyProvider {
-      /// The `id` provided in `#[provider(id = "...")]`.
-      provider_id: Symbol,
-      /// The identifier of `type SomeName;`
-      ident: Ident,
+        /// The `id` provided in `#[provider(id = "...")]`.
+        provider_id: Symbol,
+        /// The identifier of `type SomeName;`
+        ident: Ident,
     },
     ProvidedTy {
         provider_def_id: DefId,

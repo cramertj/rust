@@ -1,5 +1,5 @@
 use rustc_attr_data_structures::{AttributeKind, Provider};
-use rustc_span::{sym, Symbol};
+use rustc_span::{Symbol, sym};
 
 use super::{AcceptContext, SingleAttributeParser};
 use crate::parser::ArgParser;
@@ -20,12 +20,12 @@ impl SingleAttributeParser for ProviderParser {
 
     fn convert(cx: &AcceptContext<'_>, args: &ArgParser<'_>) -> Option<AttributeKind> {
         let opt_id = (|| -> Option<Symbol> {
-          // Parse out `(id = "...")`
-          args.list()?.single()?.meta_item()?.word_is(sym::id)?.name_value()?.value_as_str()
+            // Parse out `(id = "...")`
+            args.list()?.single()?.meta_item()?.word_is(sym::id)?.name_value()?.value_as_str()
         })();
         let Some(provider_id) = opt_id else {
-          cx.dcx().span_err(cx.attr_span, "expected `#[provider(id = \"...\")");
-          return None;
+            cx.dcx().span_err(cx.attr_span, "expected `#[provider(id = \"...\")");
+            return None;
         };
         Some(AttributeKind::Provider(Provider { provider_id, span: cx.attr_span }))
     }

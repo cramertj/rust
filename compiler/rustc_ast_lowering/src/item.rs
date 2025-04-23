@@ -15,13 +15,14 @@ use smallvec::{SmallVec, smallvec};
 use thin_vec::ThinVec;
 use tracing::instrument;
 
-use crate::errors::{
-  ProviderWithGenerics, ProviderWithAssignedType, InvalidAbi, InvalidAbiSuggestion, MisplacedRelaxTraitBound, TupleStructWithDefault,
-};
 use super::stability::{enabled_names, gate_unstable_abi};
 use super::{
     AstOwner, FnDeclKind, ImplTraitContext, ImplTraitPosition, LoweringContext, ParamMode,
     ResolverAstLoweringExt,
+};
+use crate::errors::{
+    InvalidAbi, InvalidAbiSuggestion, MisplacedRelaxTraitBound, ProviderWithAssignedType,
+    ProviderWithGenerics, TupleStructWithDefault,
 };
 
 pub(super) struct ItemLowerer<'a, 'hir> {
@@ -295,23 +296,18 @@ impl<'hir> LoweringContext<'_, 'hir> {
 
                 // `#[provider(id = "..."")]` types are type providers, not
                 // regular aliases.
-                if let Some(provider) = attrs
-                    .iter()
-                    .find_map(|attr| match attr {
-                        hir::Attribute::Parsed(AttributeKind::Provider(provider)) => Some(provider),
-                        _ => None
-                    })
-                {
+                if let Some(provider) = attrs.iter().find_map(|attr| match attr {
+                    hir::Attribute::Parsed(AttributeKind::Provider(provider)) => Some(provider),
+                    _ => None,
+                }) {
                     if !generics.params.is_empty() || !generics.where_clause.predicates.is_empty() {
                         self.dcx().emit_err(ProviderWithGenerics { generics_span: generics.span });
                     }
                     if let Some(ty) = ty {
-                        self.dcx().emit_err(ProviderWithAssignedType { assigned_type_span: ty.span });
+                        self.dcx()
+                            .emit_err(ProviderWithAssignedType { assigned_type_span: ty.span });
                     }
-                    return hir::ItemKind::TyProvider {
-                      provider_id: provider.provider_id,
-                      ident,
-                    };
+                    return hir::ItemKind::TyProvider { provider_id: provider.provider_id, ident };
                 }
 
                 let mut generics = generics.clone();

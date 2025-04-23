@@ -594,11 +594,7 @@ pub fn walk_item<'v, V: Visitor<'v>>(visitor: &mut V, item: &'v Item<'v>) -> V::
         ItemKind::TyProvider { ident, provider_id: _ } => {
             try_visit!(visitor.visit_ident(ident));
         }
-        ItemKind::ProvidedTy {
-            provider_def_id: _,
-            generic_args,
-            remaining_path,
-        } => {
+        ItemKind::ProvidedTy { provider_def_id: _, generic_args, remaining_path } => {
             if let Some(generics) = generic_args {
                 try_visit!(visitor.visit_generic_args(generics));
             }
@@ -1331,7 +1327,10 @@ pub fn walk_opaque_ty<'v, V: Visitor<'v>>(visitor: &mut V, opaque: &'v OpaqueTy<
     V::Result::output()
 }
 
-pub fn walk_provider_ty<'v, V: Visitor<'v>>(visitor: &mut V, provider: &'v ProviderTy) -> V::Result {
+pub fn walk_provider_ty<'v, V: Visitor<'v>>(
+    visitor: &mut V,
+    provider: &'v ProviderTy,
+) -> V::Result {
     let &ProviderTy { hir_id, def_id: _, span: _, provider_id: _ } = provider;
     try_visit!(visitor.visit_id(hir_id));
     V::Result::output()
