@@ -130,6 +130,7 @@ impl<'tcx> LateLintPass<'tcx> for MissingInline {
             | hir::ItemKind::TraitAlias(..)
             | hir::ItemKind::GlobalAsm { .. }
             | hir::ItemKind::TyAlias(..)
+            | hir::ItemKind::TyProvider(..)
             | hir::ItemKind::Union(..)
             | hir::ItemKind::ExternCrate(..)
             | hir::ItemKind::ForeignMod { .. }

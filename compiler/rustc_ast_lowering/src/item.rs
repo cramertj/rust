@@ -2,6 +2,7 @@ use rustc_abi::ExternAbi;
 use rustc_ast::ptr::P;
 use rustc_ast::visit::AssocCtxt;
 use rustc_ast::*;
+use rustc_attr_parsing::AttributeKind;
 use rustc_errors::ErrorGuaranteed;
 use rustc_hir::def::{DefKind, Res};
 use rustc_hir::def_id::{CRATE_DEF_ID, LocalDefId};
@@ -291,6 +292,13 @@ impl<'hir> LoweringContext<'_, 'hir> {
                 // type Foo = Foo1
                 // opaque type Foo1: Trait
                 let ident = self.lower_ident(*ident);
+                if attrs
+                    .iter()
+                    .any(|attr| matches!(attr, hir::Attribute::Parsed(AttributeKind::Provider)))
+                {
+                    // FIXME(tmandry): Check that there are no generics and no type.
+                    return hir::ItemKind::TyProvider(ident);
+                }
                 let mut generics = generics.clone();
                 add_ty_alias_where_clause(&mut generics, *where_clauses, true);
                 let (generics, ty) = self.lower_generics(

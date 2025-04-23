@@ -190,6 +190,7 @@ pub enum AttributeKind {
         comment: Symbol,
     },
     MacroTransparency(Transparency),
+    Provider,
     Repr(ThinVec<(ReprAttr, Span)>),
     Stability {
         stability: Stability,

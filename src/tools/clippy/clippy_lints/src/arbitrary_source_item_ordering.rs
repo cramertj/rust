@@ -477,6 +477,7 @@ fn convert_module_item_kind(value: &ItemKind<'_>) -> SourceItemOrderingModuleIte
         ItemKind::ForeignMod { .. } => ForeignMod,
         ItemKind::GlobalAsm { .. } => GlobalAsm,
         ItemKind::TyAlias(..) => TyAlias,
+        ItemKind::TyProvider(..) => TyAlias,
         ItemKind::Enum(..) => Enum,
         ItemKind::Struct(..) => Struct,
         ItemKind::Union(..) => Union,

@@ -588,6 +588,9 @@ pub fn walk_item<'v, V: Visitor<'v>>(visitor: &mut V, item: &'v Item<'v>) -> V::
             try_visit!(visitor.visit_ty_unambig(ty));
             try_visit!(visitor.visit_generics(generics));
         }
+        ItemKind::TyProvider(ident) => {
+            try_visit!(visitor.visit_ident(ident));
+        }
         ItemKind::Enum(ident, ref enum_definition, ref generics) => {
             try_visit!(visitor.visit_ident(ident));
             try_visit!(visitor.visit_generics(generics));

@@ -1630,6 +1630,7 @@ symbols! {
         process_exit,
         profiler_builtins,
         profiler_runtime,
+        provider,
         ptr,
         ptr_cast,
         ptr_cast_const,

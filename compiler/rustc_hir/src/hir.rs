@@ -4198,6 +4198,8 @@ pub enum ItemKind<'hir> {
     },
     /// A type alias, e.g., `type Foo = Bar<u8>`.
     TyAlias(Ident, &'hir Ty<'hir>, &'hir Generics<'hir>),
+    /// A type provider from a plugin.
+    TyProvider(Ident),
     /// An enum definition, e.g., `enum Foo<A, B> { C<A>, D<B> }`.
     Enum(Ident, EnumDef<'hir>, &'hir Generics<'hir>),
     /// A struct definition, e.g., `struct Foo<A> {x: A}`.
@@ -4246,6 +4248,7 @@ impl ItemKind<'_> {
             | ItemKind::Macro(ident, ..)
             | ItemKind::Mod(ident, ..)
             | ItemKind::TyAlias(ident, ..)
+            | ItemKind::TyProvider(ident, ..)
             | ItemKind::Enum(ident, ..)
             | ItemKind::Struct(ident, ..)
             | ItemKind::Union(ident, ..)
@@ -4286,6 +4289,7 @@ impl ItemKind<'_> {
             ItemKind::ForeignMod { .. } => "extern block",
             ItemKind::GlobalAsm { .. } => "global asm item",
             ItemKind::TyAlias(..) => "type alias",
+            ItemKind::TyProvider(..) => "type provider",
             ItemKind::Enum(..) => "enum",
             ItemKind::Struct(..) => "struct",
             ItemKind::Union(..) => "union",

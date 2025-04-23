@@ -670,6 +670,12 @@ impl<'a> State<'a> {
                 self.word(";");
                 self.end(); // end the outer ibox
             }
+            hir::ItemKind::TyProvider(ident) => {
+                self.head("ty provider");
+                self.print_ident(ident);
+                self.word(";");
+                self.end();
+            }
             hir::ItemKind::Enum(ident, ref enum_definition, params) => {
                 self.print_enum_def(enum_definition, params, ident.name, item.span);
             }

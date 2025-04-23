@@ -239,6 +239,7 @@ impl<'v> hir_visit::Visitor<'v> for StatCollector<'v> {
                 ForeignMod,
                 GlobalAsm,
                 TyAlias,
+                TyProvider,
                 Enum,
                 Struct,
                 Union,

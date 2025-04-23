@@ -589,7 +589,7 @@ pub static BUILTIN_ATTRIBUTES: &[BuiltinAttribute] = &[
     // Probably temporary component of min_generic_const_args.
     // `#[type_const] const ASSOC: usize;`
     gated!(
-        type_const, Normal, template!(Word), ErrorFollowing,
+        type_const, Normal, template!(Word), WarnFollowing,
         EncodeCrossCrate::Yes, min_generic_const_args, experimental!(type_const),
     ),
 
@@ -661,6 +661,8 @@ pub static BUILTIN_ATTRIBUTES: &[BuiltinAttribute] = &[
         EncodeCrossCrate::No, dropck_eyepatch,
         "`may_dangle` has unstable semantics and may be removed in the future",
     ),
+
+    ungated!(provider, Normal, template!(Word), WarnFollowing, EncodeCrossCrate::Yes),
 
     rustc_attr!(
         rustc_never_type_options,

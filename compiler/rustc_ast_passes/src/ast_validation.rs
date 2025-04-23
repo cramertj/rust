@@ -1106,7 +1106,7 @@ impl<'a> Visitor<'a> for AstValidator<'a> {
                 ty_alias @ box TyAlias { defaultness, bounds, where_clauses, ty, .. },
             ) => {
                 self.check_defaultness(item.span, *defaultness);
-                if ty.is_none() {
+                if ty.is_none() && !item.attrs.iter().any(|attr| attr.has_name(sym::provider)) {
                     self.dcx().emit_err(errors::TyAliasWithoutBody {
                         span: item.span,
                         replace_span: self.ending_semi_or_hi(item.span),

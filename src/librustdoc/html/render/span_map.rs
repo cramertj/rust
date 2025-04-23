@@ -276,6 +276,7 @@ impl<'tcx> Visitor<'tcx> for SpanMapVisitor<'tcx> {
             | ItemKind::Fn { .. }
             | ItemKind::Macro(..)
             | ItemKind::TyAlias(..)
+            | ItemKind::TyProvider(..)
             | ItemKind::Enum(..)
             | ItemKind::Struct(..)
             | ItemKind::Union(..)
