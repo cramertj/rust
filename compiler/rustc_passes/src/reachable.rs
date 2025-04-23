@@ -236,6 +236,7 @@ impl<'tcx> ReachableContext<'tcx> {
                     | hir::ItemKind::Use(..)
                     | hir::ItemKind::TyAlias(..)
                     | hir::ItemKind::TyProvider { .. }
+                    | hir::ItemKind::ProvidedTy { .. }
                     | hir::ItemKind::Macro(..)
                     | hir::ItemKind::Mod(..)
                     | hir::ItemKind::ForeignMod { .. }

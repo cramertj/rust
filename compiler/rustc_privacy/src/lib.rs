@@ -655,9 +655,8 @@ impl<'tcx> Visitor<'tcx> for EmbargoVisitor<'tcx> {
             | hir::ItemKind::ExternCrate(..)
             | hir::ItemKind::GlobalAsm { .. }
             // TODO(ecdysis): This can actually have nested items, but not until
-            // after it is resolved by the plugin. Does this need special handling
-            // here?
-            | hir::ItemKind::TyProvider { .. } => {}
+            // after it is resolved by the plugin.
+            | hir::ItemKind::TyProvider { .. } | hir::ItemKind::ProvidedTy { .. } => {}
             // The interface is empty, and all nested items are processed by `visit_item`.
             hir::ItemKind::Mod(..) => {}
             hir::ItemKind::Macro(_, macro_def, _) => {

@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use rustc_ast::ptr::P;
 use rustc_ast::{self as ast, *};
 use rustc_hir as hir;
 use rustc_hir::GenericArg;
@@ -11,7 +12,7 @@ use rustc_span::{BytePos, DUMMY_SP, DesugaringKind, Ident, Span, Symbol, sym};
 use smallvec::{SmallVec, smallvec};
 use tracing::{debug, instrument};
 
-use crate::errors::ProviderPathToProvidedTyNotImplemented;
+use crate::errors::ProviderTyNoParenthesizedGenerics;
 
 use super::errors::{
     AsyncBoundNotOnTrait, AsyncBoundOnlyForFnTraits, BadReturnTypeNotation,
@@ -41,8 +42,10 @@ impl<'a, 'hir> LoweringContext<'a, 'hir> {
             // Reject cases like `<impl Trait>::Assoc` and `<impl Trait as Trait>::Assoc`.
             .map(|q| self.lower_ty(&q.ty, ImplTraitContext::Disallowed(ImplTraitPosition::Path)));
 
-        // TODO(ecdysis)
-        for (i, segment) in p.segments.iter().enumerate() {
+        // If any segments point to a type provider, that segment and anything
+        // that follows will be transformed into a provided type.
+        let mut segments_iter = p.segments.iter();
+        while let Some(segment) = segments_iter.next() {
             let Some(partial) = self.resolver.get_partial_res(segment.id) else {
               continue
             };
@@ -50,25 +53,37 @@ impl<'a, 'hir> LoweringContext<'a, 'hir> {
               continue
             };
 
-            // TODO(ecdysis) store this and the unresolved path w/ any generics
-            // pre-lowered into the new def.
-            let _ = i;
-            let _ = provider_def_id;
-            if true {
-                self.dcx().emit_fatal(ProviderPathToProvidedTyNotImplemented {
-                  span: p.span
-                });
-            }
-
-            // Create a def for the provided type, and make the path refer to
-            // that def.
-            //
-            // TODO(ecdysis) how do we actually make the def ID point to the
-            // incomplete path?
-
             let parent_def_id = self.current_hir_id_owner.def_id;
             let node_id = self.next_node_id();
             let provided_ty_id = self.create_def(parent_def_id, node_id, /*name=*/None, DefKind::ProvidedTy, p.span);
+
+            // Register the `provided_ty` as an item.
+            self.with_hir_id_owner(node_id, |this| {
+                let generic_args =
+                    this.lower_provider_ty_generics(&segment.args);
+
+                let remaining_path = this.arena.alloc_from_iter(segments_iter.map(|trailing_segment| {
+                    hir::ProvidedTyRemainingPathSegment {
+                        ident: trailing_segment.ident,
+                        hir_id: this.lower_node_id(trailing_segment.id),
+                        args: this.lower_provider_ty_generics(&trailing_segment.args),
+                    }
+                }));
+
+                let item = hir::Item {
+                    owner_id: this.owner_id(node_id),
+                    kind: hir::ItemKind::ProvidedTy {
+                      provider_def_id,
+                      generic_args,
+                      remaining_path,
+                    },
+                    span: segment.span(),
+                    // FIXME(ecdysis): What vis_span should be provided here?
+                    vis_span: p.span,
+                };
+                hir::OwnerNode::Item(this.arena.alloc(item))
+            });
+
             return hir::QPath::Resolved(None, self.arena.alloc(hir::Path {
                 span: p.span,
                 res: Res::Def(DefKind::ProvidedTy, provided_ty_id.into()),
@@ -450,6 +465,25 @@ impl<'a, 'hir> LoweringContext<'a, 'hir> {
             },
         }
     }
+
+    fn lower_provider_ty_generics(&mut self, generics: &Option<P<GenericArgs>>) -> Option<&'hir hir::GenericArgs<'hir>> {
+        let data = match generics.as_deref()? {
+            GenericArgs::AngleBracketed(data) => data,
+            &GenericArgs::Parenthesized(ParenthesizedArgs { span, .. }) |
+            &GenericArgs::ParenthesizedElided(span) => {
+              self.dcx().emit_err(ProviderTyNoParenthesizedGenerics { span });
+              return None;
+            }
+        };
+        // TODO(ecdysis) obv this isn't literally an ExternFnParam.
+        // Probably a new variant needs to be added to `ImplTraitPosition`.
+        Some(self.lower_angle_bracketed_parameter_data(
+          data, ParamMode::Explicit,
+          ImplTraitContext::Disallowed(ImplTraitPosition::ExternFnParam)
+        ).0.into_generic_args(self))
+    }
+
+
 
     fn maybe_insert_elided_lifetimes_in_path(
         &mut self,

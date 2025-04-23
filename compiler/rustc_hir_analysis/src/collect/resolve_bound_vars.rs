@@ -624,6 +624,7 @@ impl<'a, 'tcx> Visitor<'tcx> for BoundVarContext<'a, 'tcx> {
             | hir::ItemKind::ForeignMod { .. }
             | hir::ItemKind::Static(..)
             | hir::ItemKind::TyProvider { .. }
+            | hir::ItemKind::ProvidedTy { .. }
             | hir::ItemKind::GlobalAsm { .. } => {
                 // These sorts of items have no lifetime parameters at all.
                 intravisit::walk_item(self, item);

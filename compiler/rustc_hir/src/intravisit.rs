@@ -594,6 +594,22 @@ pub fn walk_item<'v, V: Visitor<'v>>(visitor: &mut V, item: &'v Item<'v>) -> V::
         ItemKind::TyProvider { ident, provider_id: _ } => {
             try_visit!(visitor.visit_ident(ident));
         }
+        ItemKind::ProvidedTy {
+            provider_def_id: _,
+            generic_args,
+            remaining_path,
+        } => {
+            if let Some(generics) = generic_args {
+                try_visit!(visitor.visit_generic_args(generics));
+            }
+            for &ProvidedTyRemainingPathSegment { ident, hir_id, args } in remaining_path {
+                try_visit!(visitor.visit_ident(ident));
+                try_visit!(visitor.visit_id(hir_id));
+                if let Some(generics) = args {
+                    try_visit!(visitor.visit_generic_args(generics));
+                }
+            }
+        }
         ItemKind::Enum(ident, ref enum_definition, ref generics) => {
             try_visit!(visitor.visit_ident(ident));
             try_visit!(visitor.visit_generics(generics));

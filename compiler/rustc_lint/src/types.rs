@@ -1718,6 +1718,7 @@ impl<'tcx> LateLintPass<'tcx> for ImproperCTypesDefinitions {
             | hir::ItemKind::TraitAlias(..)
             | hir::ItemKind::Trait(..)
             | hir::ItemKind::TyProvider { .. }
+            | hir::ItemKind::ProvidedTy { .. }
             | hir::ItemKind::GlobalAsm { .. }
             | hir::ItemKind::ForeignMod { .. }
             | hir::ItemKind::Mod(..)

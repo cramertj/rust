@@ -240,6 +240,7 @@ impl<'v> hir_visit::Visitor<'v> for StatCollector<'v> {
                 GlobalAsm,
                 TyAlias,
                 TyProvider,
+                ProvidedTy,
                 Enum,
                 Struct,
                 Union,

@@ -690,6 +690,7 @@ impl<'tcx> TyCtxt<'tcx> {
                     ItemKind::GlobalAsm { .. } => "global asm",
                     ItemKind::TyAlias(..) => "ty",
                     ItemKind::TyProvider { .. } => "ty provider",
+                    ItemKind::ProvidedTy { .. } => "provided ty",
                     ItemKind::Enum(..) => "enum",
                     ItemKind::Struct(..) => "struct",
                     ItemKind::Union(..) => "union",

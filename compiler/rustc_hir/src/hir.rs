@@ -4211,10 +4211,15 @@ pub enum ItemKind<'hir> {
     TyAlias(Ident, &'hir Ty<'hir>, &'hir Generics<'hir>),
     /// A type provider from a plugin.
     TyProvider {
-      /// The `id` provided in `#[provider(id = "...")`.
+      /// The `id` provided in `#[provider(id = "...")]`.
       provider_id: Symbol,
       /// The identifier of `type SomeName;`
       ident: Ident,
+    },
+    ProvidedTy {
+        provider_def_id: DefId,
+        generic_args: Option<&'hir GenericArgs<'hir>>,
+        remaining_path: &'hir [ProvidedTyRemainingPathSegment<'hir>],
     },
     /// An enum definition, e.g., `enum Foo<A, B> { C<A>, D<B> }`.
     Enum(Ident, EnumDef<'hir>, &'hir Generics<'hir>),
@@ -4229,6 +4234,17 @@ pub enum ItemKind<'hir> {
 
     /// An implementation, e.g., `impl<A> Trait for Foo { .. }`.
     Impl(&'hir Impl<'hir>),
+}
+
+/// A segment of the path remaining after a provided type,
+/// e.g. `Foo<u8>` in `ProvidedTy<i32>::Foo<u8>::Bar`.
+#[derive(Debug, Clone, Copy, HashStable_Generic)]
+pub struct ProvidedTyRemainingPathSegment<'hir> {
+    pub ident: Ident,
+    // TODO(ecdysis) unused for now, TODO use in diagnostics.
+    #[stable_hasher(ignore)]
+    pub hir_id: HirId,
+    pub args: Option<&'hir GenericArgs<'hir>>,
 }
 
 /// Represents an impl block declaration.
@@ -4271,7 +4287,8 @@ impl ItemKind<'_> {
             | ItemKind::Trait(_, _, ident, ..)
             | ItemKind::TraitAlias(ident, ..) => Some(ident),
 
-            ItemKind::Use(_, UseKind::Glob | UseKind::ListStem)
+            ItemKind::ProvidedTy { .. }
+            | ItemKind::Use(_, UseKind::Glob | UseKind::ListStem)
             | ItemKind::ForeignMod { .. }
             | ItemKind::GlobalAsm { .. }
             | ItemKind::Impl(_) => None,
@@ -4306,6 +4323,7 @@ impl ItemKind<'_> {
             ItemKind::GlobalAsm { .. } => "global asm item",
             ItemKind::TyAlias(..) => "type alias",
             ItemKind::TyProvider { .. } => "type provider",
+            ItemKind::ProvidedTy { .. } => "provided type",
             ItemKind::Enum(..) => "enum",
             ItemKind::Struct(..) => "struct",
             ItemKind::Union(..) => "union",

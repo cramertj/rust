@@ -64,7 +64,7 @@ ast_lowering_provider_with_assigned_type = provider types cannot be assigned
     .label = provider types are defined by plugins, and cannot be assigned inline
     .suggestion = remove the assigned type
 
-ast_lowering_provider_path_to_provided_ty_not_implemented = provider path to provided type lowering not yet implemented
+ast_lowering_provider_ty_no_parenthesied_generics = type providers do not accept parenthesized (`Fn`-style) generics
 
 ast_lowering_does_not_support_modifiers =
     the `{$class_name}` register class does not support template modifiers

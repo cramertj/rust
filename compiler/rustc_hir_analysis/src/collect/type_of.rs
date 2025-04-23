@@ -233,7 +233,7 @@ pub(super) fn type_of(tcx: TyCtxt<'_>, def_id: LocalDefId) -> ty::EarlyBinder<'_
                 }
             }
             ItemKind::TyAlias(_, self_ty, _) => icx.lower_ty(self_ty),
-            ItemKind::TyProvider { .. } => {
+            ItemKind::TyProvider { .. } | ItemKind::ProvidedTy { .. } => {
                 // TODO(ecdysis): Lower to the unit type for now.
                 tcx.types.unit
             }

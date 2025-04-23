@@ -759,8 +759,14 @@ fn lower_item(tcx: TyCtxt<'_>, item_id: hir::ItemId) {
             tcx.ensure_ok().predicates_of(def_id);
         }
 
-        hir::ItemKind::TyProvider { .. } => {
-            tcx.ensure_ok().type_of(def_id);
+        hir::ItemKind::TyProvider { .. } | hir::ItemKind::ProvidedTy { .. } => {
+            // TODO(ecdysis) I'm not sure what, if any, logic should go here.
+            // Probably we want all the "interesting" logic of making sure
+            // analysis is successful to be run in the provider itself.
+            //
+            // However, this code should avoid querying anything too eagerly so
+            // as not to add unnecessary requirements around the ordering of
+            // computing provided types.
         }
 
         hir::ItemKind::Static(_, ty, ..) | hir::ItemKind::Const(_, ty, ..) => {

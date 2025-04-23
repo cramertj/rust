@@ -60,8 +60,8 @@ pub(crate) struct ProviderWithAssignedType {
 }
 
 #[derive(Diagnostic)]
-#[diag(ast_lowering_provider_path_to_provided_ty_not_implemented)]
-pub(crate) struct ProviderPathToProvidedTyNotImplemented {
+#[diag(ast_lowering_provider_ty_no_parenthesied_generics)]
+pub(crate) struct ProviderTyNoParenthesizedGenerics {
     #[primary_span]
     pub span: Span,
 }

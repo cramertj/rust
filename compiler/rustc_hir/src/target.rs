@@ -114,7 +114,9 @@ impl Target {
             ItemKind::ForeignMod { .. } => Target::ForeignMod,
             ItemKind::GlobalAsm { .. } => Target::GlobalAsm,
             ItemKind::TyAlias(..) => Target::TyAlias,
+            // TODO(ecdysis) do we want a new target?
             ItemKind::TyProvider { .. } => Target::TyAlias,
+            ItemKind::ProvidedTy { .. } => Target::TyAlias,
             ItemKind::Enum(..) => Target::Enum,
             ItemKind::Struct(..) => Target::Struct,
             ItemKind::Union(..) => Target::Union,
