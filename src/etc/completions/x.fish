@@ -65,6 +65,7 @@ complete -c x -n "__fish_x_needs_command" -a "fix" -d 'Run cargo fix'
 complete -c x -n "__fish_x_needs_command" -a "fmt" -d 'Run rustfmt'
 complete -c x -n "__fish_x_needs_command" -a "doc" -d 'Build documentation'
 complete -c x -n "__fish_x_needs_command" -a "test" -d 'Build and run some test suites'
+complete -c x -n "__fish_x_needs_command" -a "ecdysis" -d 'Build a target using Ecdysis'
 complete -c x -n "__fish_x_needs_command" -a "miri" -d 'Build and run some test suites *in Miri*'
 complete -c x -n "__fish_x_needs_command" -a "bench" -d 'Build and run some benchmarks'
 complete -c x -n "__fish_x_needs_command" -a "clean" -d 'Clean out build directories'
@@ -339,6 +340,40 @@ complete -c x -n "__fish_x_using_subcommand test" -l llvm-profile-generate -d 'g
 complete -c x -n "__fish_x_using_subcommand test" -l enable-bolt-settings -d 'Enable BOLT link flags'
 complete -c x -n "__fish_x_using_subcommand test" -l skip-stage0-validation -d 'Skip stage0 compiler validation'
 complete -c x -n "__fish_x_using_subcommand test" -s h -l help -d 'Print help (see more with \'--help\')'
+complete -c x -n "__fish_x_using_subcommand ecdysis" -l config -d 'TOML configuration file for build' -r -F
+complete -c x -n "__fish_x_using_subcommand ecdysis" -l build-dir -d 'Build directory, overrides `build.build-dir` in `bootstrap.toml`' -r -f -a "(__fish_complete_directories)"
+complete -c x -n "__fish_x_using_subcommand ecdysis" -l build -d 'build target of the stage0 compiler' -r -f
+complete -c x -n "__fish_x_using_subcommand ecdysis" -l host -d 'host targets to build' -r -f
+complete -c x -n "__fish_x_using_subcommand ecdysis" -l target -d 'target targets to build' -r -f
+complete -c x -n "__fish_x_using_subcommand ecdysis" -l exclude -d 'build paths to exclude' -r -F
+complete -c x -n "__fish_x_using_subcommand ecdysis" -l skip -d 'build paths to skip' -r -F
+complete -c x -n "__fish_x_using_subcommand ecdysis" -l rustc-error-format -r -f
+complete -c x -n "__fish_x_using_subcommand ecdysis" -l on-fail -d 'command to run on failure' -r -f -a "(__fish_complete_command)"
+complete -c x -n "__fish_x_using_subcommand ecdysis" -l stage -d 'stage to build (indicates compiler to use/test, e.g., stage 0 uses the bootstrap compiler, stage 1 the stage 0 rustc artifacts, etc.)' -r -f
+complete -c x -n "__fish_x_using_subcommand ecdysis" -l keep-stage -d 'stage(s) to keep without recompiling (pass multiple times to keep e.g., both stages 0 and 1)' -r -f
+complete -c x -n "__fish_x_using_subcommand ecdysis" -l keep-stage-std -d 'stage(s) of the standard library to keep without recompiling (pass multiple times to keep e.g., both stages 0 and 1)' -r -f
+complete -c x -n "__fish_x_using_subcommand ecdysis" -l src -d 'path to the root of the rust checkout' -r -f -a "(__fish_complete_directories)"
+complete -c x -n "__fish_x_using_subcommand ecdysis" -s j -l jobs -d 'number of jobs to run in parallel' -r -f
+complete -c x -n "__fish_x_using_subcommand ecdysis" -l warnings -d 'if value is deny, will deny warnings if value is warn, will emit warnings otherwise, use the default configured behaviour' -r -f -a "{deny\t'',warn\t'',default\t''}"
+complete -c x -n "__fish_x_using_subcommand ecdysis" -l error-format -d 'rustc error format' -r -f
+complete -c x -n "__fish_x_using_subcommand ecdysis" -l color -d 'whether to use color in cargo and rustc output' -r -f -a "{always\t'',never\t'',auto\t''}"
+complete -c x -n "__fish_x_using_subcommand ecdysis" -l rust-profile-generate -d 'generate PGO profile with rustc build' -r -F
+complete -c x -n "__fish_x_using_subcommand ecdysis" -l rust-profile-use -d 'use PGO profile for rustc build' -r -F
+complete -c x -n "__fish_x_using_subcommand ecdysis" -l llvm-profile-use -d 'use PGO profile for LLVM build' -r -F
+complete -c x -n "__fish_x_using_subcommand ecdysis" -l reproducible-artifact -d 'Additional reproducible artifacts that should be added to the reproducible artifacts archive' -r
+complete -c x -n "__fish_x_using_subcommand ecdysis" -l set -d 'override options in bootstrap.toml' -r -f
+complete -c x -n "__fish_x_using_subcommand ecdysis" -l ci -d 'Make bootstrap to behave as it\'s running on the CI environment or not' -r -f -a "{true\t'',false\t''}"
+complete -c x -n "__fish_x_using_subcommand ecdysis" -s v -l verbose -d 'use verbose output (-vv for very verbose)'
+complete -c x -n "__fish_x_using_subcommand ecdysis" -s i -l incremental -d 'use incremental compilation'
+complete -c x -n "__fish_x_using_subcommand ecdysis" -l include-default-paths -d 'include default paths in addition to the provided ones'
+complete -c x -n "__fish_x_using_subcommand ecdysis" -l dry-run -d 'dry run; don\'t build anything'
+complete -c x -n "__fish_x_using_subcommand ecdysis" -l dump-bootstrap-shims -d 'Indicates whether to dump the work done from bootstrap shims'
+complete -c x -n "__fish_x_using_subcommand ecdysis" -l json-output -d 'use message-format=json'
+complete -c x -n "__fish_x_using_subcommand ecdysis" -l bypass-bootstrap-lock -d 'Bootstrap uses this value to decide whether it should bypass locking the build process. This is rarely needed (e.g., compiling the std library for different targets in parallel)'
+complete -c x -n "__fish_x_using_subcommand ecdysis" -l llvm-profile-generate -d 'generate PGO profile with llvm built for rustc'
+complete -c x -n "__fish_x_using_subcommand ecdysis" -l enable-bolt-settings -d 'Enable BOLT link flags'
+complete -c x -n "__fish_x_using_subcommand ecdysis" -l skip-stage0-validation -d 'Skip stage0 compiler validation'
+complete -c x -n "__fish_x_using_subcommand ecdysis" -s h -l help -d 'Print help (see more with \'--help\')'
 complete -c x -n "__fish_x_using_subcommand miri" -l test-args -d 'extra arguments to be passed for the test tool being used (e.g. libtest, compiletest or rustdoc)' -r
 complete -c x -n "__fish_x_using_subcommand miri" -l config -d 'TOML configuration file for build' -r -F
 complete -c x -n "__fish_x_using_subcommand miri" -l build-dir -d 'Build directory, overrides `build.build-dir` in `bootstrap.toml`' -r -f -a "(__fish_complete_directories)"
