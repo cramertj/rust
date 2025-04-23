@@ -114,7 +114,13 @@ impl<'a, 'ra, 'tcx> visit::Visitor<'a> for DefCollector<'a, 'ra, 'tcx> {
             ItemKind::Struct(..) => DefKind::Struct,
             ItemKind::Union(..) => DefKind::Union,
             ItemKind::ExternCrate(..) => DefKind::ExternCrate,
-            ItemKind::TyAlias(..) => DefKind::TyAlias,
+            ItemKind::TyAlias(_) => {
+                if i.attrs.iter().any(|attr| attr.has_name(sym::provider)) {
+                    DefKind::TyProvider
+                } else {
+                    DefKind::TyAlias
+                }
+            }
             ItemKind::Static(s) => DefKind::Static {
                 safety: hir::Safety::Safe,
                 mutability: s.mutability,

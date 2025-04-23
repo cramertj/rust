@@ -385,6 +385,7 @@ impl<'v> hir_visit::Visitor<'v> for StatCollector<'v> {
                 Never,
                 Tup,
                 Path,
+                Provider,
                 OpaqueDef,
                 TraitAscription,
                 TraitObject,

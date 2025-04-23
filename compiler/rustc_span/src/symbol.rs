@@ -1146,6 +1146,7 @@ symbols! {
         i8_legacy_fn_max_value,
         i8_legacy_fn_min_value,
         i8_legacy_mod,
+        id,
         ident,
         if_let,
         if_let_guard,

@@ -138,6 +138,8 @@ fixed_size_enum! {
         ( TraitAlias                               )
         ( AssocTy                                  )
         ( TyParam                                  )
+        ( TyProvider )
+        ( ProvidedTy )
         ( Fn                                       )
         ( Const                                    )
         ( ConstParam                               )

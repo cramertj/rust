@@ -3503,6 +3503,15 @@ pub enum InferDelegationKind {
     Output,
 }
 
+#[derive(Debug, Clone, Copy, HashStable_Generic)]
+pub struct ProviderTy {
+    #[stable_hasher(ignore)]
+    pub hir_id: HirId,
+    pub def_id: LocalDefId,
+    pub span: Span,
+    pub provider_id: Symbol,
+}
+
 /// The various kinds of types recognized by the compiler.
 #[derive(Debug, Clone, Copy, HashStable_Generic)]
 // SAFETY: `repr(u8)` is required so that `TyKind<()>` and `TyKind<!>` are layout compatible
@@ -3553,6 +3562,8 @@ pub enum TyKind<'hir, Unambig = ()> {
     /// This variant is not always used to represent inference types, sometimes
     /// [`GenericArg::Infer`] is used instead.
     Infer(Unambig),
+    /// A plugin-provided type.
+    Provider(&'hir ProviderTy),
 }
 
 #[derive(Debug, Clone, Copy, HashStable_Generic)]
@@ -4199,7 +4210,12 @@ pub enum ItemKind<'hir> {
     /// A type alias, e.g., `type Foo = Bar<u8>`.
     TyAlias(Ident, &'hir Ty<'hir>, &'hir Generics<'hir>),
     /// A type provider from a plugin.
-    TyProvider(Ident),
+    TyProvider {
+      /// The `id` provided in `#[provider(id = "...")`.
+      provider_id: Symbol,
+      /// The identifier of `type SomeName;`
+      ident: Ident,
+    },
     /// An enum definition, e.g., `enum Foo<A, B> { C<A>, D<B> }`.
     Enum(Ident, EnumDef<'hir>, &'hir Generics<'hir>),
     /// A struct definition, e.g., `struct Foo<A> {x: A}`.
@@ -4248,7 +4264,7 @@ impl ItemKind<'_> {
             | ItemKind::Macro(ident, ..)
             | ItemKind::Mod(ident, ..)
             | ItemKind::TyAlias(ident, ..)
-            | ItemKind::TyProvider(ident, ..)
+            | ItemKind::TyProvider { ident, .. }
             | ItemKind::Enum(ident, ..)
             | ItemKind::Struct(ident, ..)
             | ItemKind::Union(ident, ..)
@@ -4289,7 +4305,7 @@ impl ItemKind<'_> {
             ItemKind::ForeignMod { .. } => "extern block",
             ItemKind::GlobalAsm { .. } => "global asm item",
             ItemKind::TyAlias(..) => "type alias",
-            ItemKind::TyProvider(..) => "type provider",
+            ItemKind::TyProvider { .. } => "type provider",
             ItemKind::Enum(..) => "enum",
             ItemKind::Struct(..) => "struct",
             ItemKind::Union(..) => "union",

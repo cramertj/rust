@@ -129,6 +129,8 @@ pub(crate) fn new_item_kind(kind: DefKind) -> ItemKind {
         | DefKind::Variant
         | DefKind::Trait
         | DefKind::TyAlias
+        | DefKind::TyProvider
+        | DefKind::ProvidedTy
         | DefKind::ForeignTy
         | DefKind::TraitAlias
         | DefKind::AssocTy

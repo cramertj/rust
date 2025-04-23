@@ -565,7 +565,7 @@ impl<'tcx> EmbargoVisitor<'tcx> {
         self.update(def_id, macro_ev, Level::Reachable);
         match def_kind {
             // No type privacy, so can be directly marked as reachable.
-            DefKind::Const | DefKind::Static { .. } | DefKind::TraitAlias | DefKind::TyAlias => {
+            DefKind::Const | DefKind::Static { .. } | DefKind::TraitAlias | DefKind::TyAlias | DefKind::TyProvider | DefKind::ProvidedTy => {
                 if vis.is_accessible_from(module, self.tcx) {
                     self.update(def_id, macro_ev, Level::Reachable);
                 }
@@ -654,7 +654,10 @@ impl<'tcx> Visitor<'tcx> for EmbargoVisitor<'tcx> {
             hir::ItemKind::Use(..)
             | hir::ItemKind::ExternCrate(..)
             | hir::ItemKind::GlobalAsm { .. }
-            | hir::ItemKind::TyProvider(_) => {}
+            // TODO(ecdysis): This can actually have nested items, but not until
+            // after it is resolved by the plugin. Does this need special handling
+            // here?
+            | hir::ItemKind::TyProvider { .. } => {}
             // The interface is empty, and all nested items are processed by `visit_item`.
             hir::ItemKind::Mod(..) => {}
             hir::ItemKind::Macro(_, macro_def, _) => {

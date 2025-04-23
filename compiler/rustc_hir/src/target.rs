@@ -114,7 +114,7 @@ impl Target {
             ItemKind::ForeignMod { .. } => Target::ForeignMod,
             ItemKind::GlobalAsm { .. } => Target::GlobalAsm,
             ItemKind::TyAlias(..) => Target::TyAlias,
-            ItemKind::TyProvider(..) => Target::TyAlias,
+            ItemKind::TyProvider { .. } => Target::TyAlias,
             ItemKind::Enum(..) => Target::Enum,
             ItemKind::Struct(..) => Target::Struct,
             ItemKind::Union(..) => Target::Union,

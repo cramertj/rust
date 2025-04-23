@@ -56,6 +56,16 @@ ast_lowering_coroutine_too_many_parameters =
 ast_lowering_default_field_in_tuple = default fields are not supported in tuple structs
     .label = default fields are only supported on structs
 
+ast_lowering_provider_with_generics = provider types cannot be defined with generics
+    .label = provider type generics are handled by plugins, and cannot be defined inline
+    .suggestion = remove the generics
+
+ast_lowering_provider_with_assigned_type = provider types cannot be assigned
+    .label = provider types are defined by plugins, and cannot be assigned inline
+    .suggestion = remove the assigned type
+
+ast_lowering_provider_path_to_provided_ty_not_implemented = provider path to provided type lowering not yet implemented
+
 ast_lowering_does_not_support_modifiers =
     the `{$class_name}` register class does not support template modifiers
 

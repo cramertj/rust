@@ -131,6 +131,8 @@ fn assumed_wf_types<'tcx>(tcx: TyCtxt<'tcx>, def_id: LocalDefId) -> &'tcx [(Ty<'
         | DefKind::Enum
         | DefKind::Trait
         | DefKind::TraitAlias
+        | DefKind::ProvidedTy
+        | DefKind::TyProvider
         | DefKind::TyAlias => ty::List::empty(),
         DefKind::OpaqueTy
         | DefKind::Mod

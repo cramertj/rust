@@ -138,6 +138,14 @@ impl Deprecation {
     }
 }
 
+#[derive(Clone, Debug, HashStable_Generic, Encodable, Decodable, PrintAttribute)]
+pub struct Provider {
+  /// User-provided string `id` value.
+  pub provider_id: Symbol,
+  /// Span of the `#[provider(id = "...")]` attribute
+  pub span: Span,
+}
+
 /// Represent parsed, *built in*, inert attributes.
 ///
 /// That means attributes that are not actually ever expanded.
@@ -190,7 +198,7 @@ pub enum AttributeKind {
         comment: Symbol,
     },
     MacroTransparency(Transparency),
-    Provider,
+    Provider(Provider),
     Repr(ThinVec<(ReprAttr, Span)>),
     Stability {
         stability: Stability,

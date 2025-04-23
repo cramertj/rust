@@ -18,9 +18,7 @@ use rustc_ast_pretty::pprust::state::MacHeader;
 use rustc_ast_pretty::pprust::{Comments, PrintState};
 use rustc_attr_data_structures::{AttributeKind, PrintAttribute};
 use rustc_hir::{
-    BindingMode, ByRef, ConstArgKind, GenericArg, GenericBound, GenericParam, GenericParamKind,
-    HirId, ImplicitSelfKind, LifetimeParamKind, Node, PatKind, PreciseCapturingArg, RangeEnd, Term,
-    TyPatKind,
+    BindingMode, ByRef, ConstArgKind, GenericArg, GenericBound, GenericParam, GenericParamKind, HirId, ImplicitSelfKind, LifetimeParamKind, Node, PatKind, PreciseCapturingArg, RangeEnd, Term, TyPatKind
 };
 use rustc_span::source_map::SourceMap;
 use rustc_span::{FileName, Ident, Span, Symbol, kw};
@@ -455,6 +453,7 @@ impl<'a> State<'a> {
                 self.word(" is ");
                 self.print_ty_pat(pat);
             }
+            hir::TyKind::Provider(..) => self.word("/*provider*/"),
         }
         self.end()
     }
@@ -670,8 +669,11 @@ impl<'a> State<'a> {
                 self.word(";");
                 self.end(); // end the outer ibox
             }
-            hir::ItemKind::TyProvider(ident) => {
-                self.head("ty provider");
+            hir::ItemKind::TyProvider { ident, provider_id } => {
+                self.print_attribute_inline(&hir::Attribute::Parsed(AttributeKind::Provider(
+                  rustc_attr_data_structures::Provider { provider_id, span: item.span }
+                )), ast::AttrStyle::Outer);
+                self.head("type");
                 self.print_ident(ident);
                 self.word(";");
                 self.end();

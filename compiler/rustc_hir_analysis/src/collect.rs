@@ -759,7 +759,7 @@ fn lower_item(tcx: TyCtxt<'_>, item_id: hir::ItemId) {
             tcx.ensure_ok().predicates_of(def_id);
         }
 
-        hir::ItemKind::TyProvider(_) => {
+        hir::ItemKind::TyProvider { .. } => {
             tcx.ensure_ok().type_of(def_id);
         }
 

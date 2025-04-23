@@ -116,6 +116,14 @@ pub fn walk_types<'tcx, V: SpannedTypeVisitor<'tcx>>(
                 "{kind:?} has not seen any uses of `walk_types` yet, ping oli-obk if you'd like any help"
             )
         }
+        DefKind::ProvidedTy
+        | DefKind::TyProvider => {
+            span_bug!(
+                tcx.def_span(item),
+                // TODO(ecdysis) walk types?
+                "`walk_types` on {kind:?} is not yet supported"
+            )
+        }
         // These don't have any types, but are visited during privacy checking.
         | DefKind::ExternCrate
         | DefKind::ForeignMod

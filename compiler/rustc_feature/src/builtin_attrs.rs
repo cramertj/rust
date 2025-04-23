@@ -662,7 +662,7 @@ pub static BUILTIN_ATTRIBUTES: &[BuiltinAttribute] = &[
         "`may_dangle` has unstable semantics and may be removed in the future",
     ),
 
-    ungated!(provider, Normal, template!(Word), WarnFollowing, EncodeCrossCrate::Yes),
+    ungated!(provider, Normal, template!(List: r#"id = "...""#), WarnFollowing, EncodeCrossCrate::Yes),
 
     rustc_attr!(
         rustc_never_type_options,

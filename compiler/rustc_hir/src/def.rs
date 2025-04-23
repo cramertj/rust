@@ -60,6 +60,12 @@ pub enum DefKind {
     Trait,
     /// Type alias: `type Foo = Bar;`
     TyAlias,
+    /// A type provider: `#[provider(id = "...")] type Provider;`.
+    TyProvider,
+    /// A "provided" type. These are defs resulting from paths that start from
+    /// a `TyProvider` such as `Provider<i32>::Foo`. The whole path will receive
+    /// a corresponding def to be resolved by the provider plugin.
+    ProvidedTy,
     /// Type from an `extern` block.
     ForeignTy,
     /// Trait alias: `trait IntIterator = Iterator<Item = i32>;`
@@ -189,6 +195,8 @@ impl DefKind {
             DefKind::ExternCrate => "extern crate",
             DefKind::GlobalAsm => "global assembly block",
             DefKind::SyntheticCoroutineBody => "synthetic mir body",
+            DefKind::TyProvider => "external type provider",
+            DefKind::ProvidedTy => "externally-provided type",
         }
     }
 
@@ -225,6 +233,8 @@ impl DefKind {
             | DefKind::ForeignTy
             | DefKind::TraitAlias
             | DefKind::AssocTy
+            | DefKind::TyProvider
+            | DefKind::ProvidedTy
             | DefKind::TyParam => Some(Namespace::TypeNS),
 
             DefKind::Fn
@@ -267,6 +277,7 @@ impl DefKind {
             | DefKind::ForeignTy
             | DefKind::TraitAlias
             | DefKind::TyParam
+            | DefKind::TyProvider
             | DefKind::ExternCrate => DefPathData::TypeNs(name.unwrap()),
 
             // An associated type name will be missing for an RPITIT.
@@ -277,6 +288,10 @@ impl DefKind {
                     DefPathData::AnonAssocTy
                 }
             }
+
+            // ProvidedTys are constructed types without a name.
+            // TODO(ecdysis) should we manufacture a name for these?
+            DefKind::ProvidedTy => DefPathData::AnonAssocTy,
 
             // It's not exactly an anon const, but wrt DefPathData, there
             // is no difference.
@@ -344,6 +359,8 @@ impl DefKind {
             | DefKind::AnonConst
             | DefKind::InlineConst
             | DefKind::GlobalAsm
+            | DefKind::ProvidedTy
+            | DefKind::TyProvider
             | DefKind::ExternCrate => false,
         }
     }

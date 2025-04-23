@@ -43,6 +43,29 @@ pub(crate) struct TupleStructWithDefault {
     pub span: Span,
 }
 
+#[derive(Diagnostic)]
+#[diag(ast_lowering_provider_with_generics)]
+pub(crate) struct ProviderWithGenerics {
+    #[primary_span]
+    #[label]
+    pub generics_span: Span,
+}
+
+#[derive(Diagnostic)]
+#[diag(ast_lowering_provider_with_assigned_type)]
+pub(crate) struct ProviderWithAssignedType {
+    #[primary_span]
+    #[label]
+    pub assigned_type_span: Span,
+}
+
+#[derive(Diagnostic)]
+#[diag(ast_lowering_provider_path_to_provided_ty_not_implemented)]
+pub(crate) struct ProviderPathToProvidedTyNotImplemented {
+    #[primary_span]
+    pub span: Span,
+}
+
 #[derive(Subdiagnostic)]
 #[suggestion(
     ast_lowering_invalid_abi_suggestion,

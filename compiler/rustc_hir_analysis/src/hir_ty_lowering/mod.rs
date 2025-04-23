@@ -53,7 +53,7 @@ use tracing::{debug, instrument};
 
 use self::errors::assoc_tag_str;
 use crate::check::check_abi_fn_ptr;
-use crate::errors::{AmbiguousLifetimeBound, BadReturnTypeNotation, NoVariantNamed};
+use crate::errors::{AmbiguousLifetimeBound, BadReturnTypeNotation, NoVariantNamed, UnresolvedProviderTy};
 use crate::hir_ty_lowering::errors::{GenericsArgsErrExtend, prohibit_assoc_item_constraint};
 use crate::hir_ty_lowering::generics::{check_generic_arg_count, lower_generic_args};
 use crate::middle::resolve_bound_vars as rbv;
@@ -2107,6 +2107,38 @@ impl<'tcx> dyn HirTyLowerer<'tcx> + '_ {
                 );
                 self.lower_path_segment(span, did, path.segments.last().unwrap())
             }
+            Res::Def(DefKind::ProvidedTy, def_id) => {
+                // TODO(ecdysis) lower to the actual expanded type
+                let mut err = self.dcx().struct_span_err(
+                    path.span,
+                    "provided types are not yet supported",
+                );
+                if let Some(hir::Node::Item(&hir::Item {
+                    kind: hir::ItemKind::Impl(impl_),
+                    ..
+                })) = tcx.hir_get_if_local(def_id)
+                {
+                    err.span_note(impl_.self_ty.span, "not yet supported");
+                }
+                let reported = err.emit();
+                Ty::new_error(tcx, reported)
+            }
+            Res::Def(DefKind::TyProvider, def_id) => {
+                // TODO(ecdysis) ???
+                let mut err = self.dcx().struct_span_err(
+                    path.span,
+                    "providers cannot be used as types",
+                );
+                if let Some(hir::Node::Item(&hir::Item {
+                    kind: hir::ItemKind::Impl(impl_),
+                    ..
+                })) = tcx.hir_get_if_local(def_id)
+                {
+                    err.span_note(impl_.self_ty.span, "provider, not a type");
+                }
+                let reported = err.emit();
+                Ty::new_error(tcx, reported)
+            }
             Res::Def(kind @ DefKind::Variant, def_id) if permit_variants => {
                 // Lower "variant type" as if it were a real type.
                 // The resulting `Ty` is type of the variant's enum for now.
@@ -2451,6 +2483,9 @@ impl<'tcx> dyn HirTyLowerer<'tcx> + '_ {
                 | DefKind::Ctor(CtorOf::Struct, CtorKind::Fn)
                 | DefKind::OpaqueTy
                 | DefKind::TyAlias
+                // TODO(ecdysis) allow type providers to provide consts?
+                | DefKind::TyProvider
+                | DefKind::ProvidedTy
                 | DefKind::TraitAlias
                 | DefKind::AssocTy
                 | DefKind::Union
@@ -2744,6 +2779,18 @@ impl<'tcx> dyn HirTyLowerer<'tcx> + '_ {
                 pat_ty
             }
             hir::TyKind::Err(guar) => Ty::new_error(tcx, *guar),
+            hir::TyKind::Provider(hir::ProviderTy {
+              hir_id: _,
+              def_id: _,
+              span,
+              provider_id
+            }) => {
+                // TODO(ecdysis): this doesn't make sense. We need to replace
+                // the `SomeProviderTy<i32>` with a concrete type before we
+                // get here.
+                let guar = self.dcx().emit_err(UnresolvedProviderTy { span: *span, provider_id: *provider_id });
+                Ty::new_error(tcx, guar)
+            }
         };
 
         self.record_ty(hir_ty.hir_id, result_ty, hir_ty.span);

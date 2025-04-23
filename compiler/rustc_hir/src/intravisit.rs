@@ -458,6 +458,9 @@ pub trait Visitor<'v>: Sized {
     fn visit_opaque_ty(&mut self, opaque: &'v OpaqueTy<'v>) -> Self::Result {
         walk_opaque_ty(self, opaque)
     }
+    fn visit_provider_ty(&mut self, provider: &'v ProviderTy) -> Self::Result {
+        walk_provider_ty(self, provider)
+    }
     fn visit_variant_data(&mut self, s: &'v VariantData<'v>) -> Self::Result {
         walk_struct_def(self, s)
     }
@@ -588,7 +591,7 @@ pub fn walk_item<'v, V: Visitor<'v>>(visitor: &mut V, item: &'v Item<'v>) -> V::
             try_visit!(visitor.visit_ty_unambig(ty));
             try_visit!(visitor.visit_generics(generics));
         }
-        ItemKind::TyProvider(ident) => {
+        ItemKind::TyProvider { ident, provider_id: _ } => {
             try_visit!(visitor.visit_ident(ident));
         }
         ItemKind::Enum(ident, ref enum_definition, ref generics) => {
@@ -1009,6 +1012,9 @@ pub fn walk_ty<'v, V: Visitor<'v>>(visitor: &mut V, typ: &'v Ty<'v, AmbigArg>) -
             try_visit!(visitor.visit_ty_unambig(ty));
             try_visit!(visitor.visit_pattern_type_pattern(pat));
         }
+        TyKind::Provider(provider) => {
+            try_visit!(visitor.visit_provider_ty(provider))
+        }
     }
     V::Result::output()
 }
@@ -1306,6 +1312,12 @@ pub fn walk_opaque_ty<'v, V: Visitor<'v>>(visitor: &mut V, opaque: &'v OpaqueTy<
     let &OpaqueTy { hir_id, def_id: _, bounds, origin: _, span: _ } = opaque;
     try_visit!(visitor.visit_id(hir_id));
     walk_list!(visitor, visit_param_bound, bounds);
+    V::Result::output()
+}
+
+pub fn walk_provider_ty<'v, V: Visitor<'v>>(visitor: &mut V, provider: &'v ProviderTy) -> V::Result {
+    let &ProviderTy { hir_id, def_id: _, span: _, provider_id: _ } = provider;
+    try_visit!(visitor.visit_id(hir_id));
     V::Result::output()
 }
 

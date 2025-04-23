@@ -344,6 +344,8 @@ fn opaque_types_defined_by<'tcx>(
         | DefKind::Field
         | DefKind::LifetimeParam
         | DefKind::Impl { .. }
+        | DefKind::TyProvider
+        | DefKind::ProvidedTy
         | DefKind::SyntheticCoroutineBody => {
             span_bug!(
                 tcx.def_span(item),

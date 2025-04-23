@@ -233,6 +233,8 @@ impl<'ra, 'tcx> Resolver<'ra, 'tcx> {
                 | DefKind::ForeignTy
                 | DefKind::OpaqueTy
                 | DefKind::TraitAlias
+                | DefKind::TyProvider
+                | DefKind::ProvidedTy
                 | DefKind::AssocTy,
                 _,
             )

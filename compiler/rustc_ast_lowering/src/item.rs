@@ -15,8 +15,8 @@ use smallvec::{SmallVec, smallvec};
 use thin_vec::ThinVec;
 use tracing::instrument;
 
-use super::errors::{
-    InvalidAbi, InvalidAbiSuggestion, MisplacedRelaxTraitBound, TupleStructWithDefault,
+use crate::errors::{
+  ProviderWithGenerics, ProviderWithAssignedType, InvalidAbi, InvalidAbiSuggestion, MisplacedRelaxTraitBound, TupleStructWithDefault,
 };
 use super::stability::{enabled_names, gate_unstable_abi};
 use super::{
@@ -292,13 +292,28 @@ impl<'hir> LoweringContext<'_, 'hir> {
                 // type Foo = Foo1
                 // opaque type Foo1: Trait
                 let ident = self.lower_ident(*ident);
-                if attrs
+
+                // `#[provider(id = "..."")]` types are type providers, not
+                // regular aliases.
+                if let Some(provider) = attrs
                     .iter()
-                    .any(|attr| matches!(attr, hir::Attribute::Parsed(AttributeKind::Provider)))
+                    .find_map(|attr| match attr {
+                        hir::Attribute::Parsed(AttributeKind::Provider(provider)) => Some(provider),
+                        _ => None
+                    })
                 {
-                    // FIXME(tmandry): Check that there are no generics and no type.
-                    return hir::ItemKind::TyProvider(ident);
+                    if !generics.params.is_empty() || !generics.where_clause.predicates.is_empty() {
+                        self.dcx().emit_err(ProviderWithGenerics { generics_span: generics.span });
+                    }
+                    if let Some(ty) = ty {
+                        self.dcx().emit_err(ProviderWithAssignedType { assigned_type_span: ty.span });
+                    }
+                    return hir::ItemKind::TyProvider {
+                      provider_id: provider.provider_id,
+                      ident,
+                    };
                 }
+
                 let mut generics = generics.clone();
                 add_ty_alias_where_clause(&mut generics, *where_clauses, true);
                 let (generics, ty) = self.lower_generics(

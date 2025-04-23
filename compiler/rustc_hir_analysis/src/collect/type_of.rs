@@ -233,8 +233,8 @@ pub(super) fn type_of(tcx: TyCtxt<'_>, def_id: LocalDefId) -> ty::EarlyBinder<'_
                 }
             }
             ItemKind::TyAlias(_, self_ty, _) => icx.lower_ty(self_ty),
-            ItemKind::TyProvider(_) => {
-                // Lower to the unit type for now.
+            ItemKind::TyProvider { .. } => {
+                // TODO(ecdysis): Lower to the unit type for now.
                 tcx.types.unit
             }
             ItemKind::Impl(hir::Impl { self_ty, .. }) => match self_ty.find_self_aliases() {
@@ -520,8 +520,8 @@ fn check_feature_inherent_assoc_ty(tcx: TyCtxt<'_>, span: Span) {
 
 pub(crate) fn type_alias_is_lazy<'tcx>(tcx: TyCtxt<'tcx>, def_id: LocalDefId) -> bool {
     use hir::intravisit::Visitor;
-    if matches!(tcx.hir_expect_item(def_id).kind, ItemKind::TyProvider(..)) {
-        // TODO: Maybe this should be lazy.
+    if matches!(tcx.hir_expect_item(def_id).kind, ItemKind::TyProvider { .. }) {
+        // TODO(ecdysis): Maybe this should be lazy.
         return false;
     }
     if tcx.features().lazy_type_alias() {

@@ -1669,6 +1669,14 @@ pub(crate) struct BadReturnTypeNotation {
 }
 
 #[derive(Diagnostic)]
+#[diag(hir_analysis_unresolved_provider_type)]
+pub(crate) struct UnresolvedProviderTy {
+    #[primary_span]
+    pub span: Span,
+    pub provider_id: Symbol,
+}
+
+#[derive(Diagnostic)]
 #[diag(hir_analysis_cmse_entry_generic, code = E0798)]
 pub(crate) struct CmseEntryGeneric {
     #[primary_span]

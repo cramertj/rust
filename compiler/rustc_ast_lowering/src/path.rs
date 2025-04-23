@@ -11,6 +11,8 @@ use rustc_span::{BytePos, DUMMY_SP, DesugaringKind, Ident, Span, Symbol, sym};
 use smallvec::{SmallVec, smallvec};
 use tracing::{debug, instrument};
 
+use crate::errors::ProviderPathToProvidedTyNotImplemented;
+
 use super::errors::{
     AsyncBoundNotOnTrait, AsyncBoundOnlyForFnTraits, BadReturnTypeNotation,
     GenericTypeWithParentheses, RTNSuggestion, UseAngleBrackets,
@@ -38,6 +40,41 @@ impl<'a, 'hir> LoweringContext<'a, 'hir> {
             .as_ref()
             // Reject cases like `<impl Trait>::Assoc` and `<impl Trait as Trait>::Assoc`.
             .map(|q| self.lower_ty(&q.ty, ImplTraitContext::Disallowed(ImplTraitPosition::Path)));
+
+        // TODO(ecdysis)
+        for (i, segment) in p.segments.iter().enumerate() {
+            let Some(partial) = self.resolver.get_partial_res(segment.id) else {
+              continue
+            };
+            let Some(Res::Def(DefKind::TyProvider, provider_def_id)) = partial.full_res() else {
+              continue
+            };
+
+            // TODO(ecdysis) store this and the unresolved path w/ any generics
+            // pre-lowered into the new def.
+            let _ = i;
+            let _ = provider_def_id;
+            if true {
+                self.dcx().emit_fatal(ProviderPathToProvidedTyNotImplemented {
+                  span: p.span
+                });
+            }
+
+            // Create a def for the provided type, and make the path refer to
+            // that def.
+            //
+            // TODO(ecdysis) how do we actually make the def ID point to the
+            // incomplete path?
+
+            let parent_def_id = self.current_hir_id_owner.def_id;
+            let node_id = self.next_node_id();
+            let provided_ty_id = self.create_def(parent_def_id, node_id, /*name=*/None, DefKind::ProvidedTy, p.span);
+            return hir::QPath::Resolved(None, self.arena.alloc(hir::Path {
+                span: p.span,
+                res: Res::Def(DefKind::ProvidedTy, provided_ty_id.into()),
+                segments: &[],
+            }));
+        }
 
         let partial_res =
             self.resolver.get_partial_res(id).unwrap_or_else(|| PartialRes::new(Res::Err));
