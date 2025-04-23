@@ -244,6 +244,16 @@ install!((self, builder, _config),
             );
         }
     };
+    Ecdysis, alias = "ecdysis", Self::should_build(_config), only_hosts: true, {
+        if let Some(tarball) = builder.ensure(dist::Ecdysis { compiler: self.compiler, target: self.target }) {
+            install_sh(builder, "ecdysis", self.compiler.stage, Some(self.target), &tarball);
+        } else {
+            // Ecdysis is only available on nightly
+            builder.info(
+                &format!("skipping Install ecdysis stage{} ({})", self.compiler.stage, self.target),
+            );
+        }
+    };
     LlvmTools, alias = "llvm-tools", Self::should_build(_config), only_hosts: true, {
         if let Some(tarball) = builder.ensure(dist::LlvmTools { target: self.target }) {
             install_sh(builder, "llvm-tools", self.compiler.stage, Some(self.target), &tarball);

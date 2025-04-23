@@ -21,6 +21,7 @@ pub(crate) enum OverlayKind {
     Llvm,
     Cargo,
     Clippy,
+    Ecdysis,
     Miri,
     Rustfmt,
     RustAnalyzer,
@@ -45,6 +46,11 @@ impl OverlayKind {
                 "src/tools/clippy/README.md",
                 "src/tools/clippy/LICENSE-APACHE",
                 "src/tools/clippy/LICENSE-MIT",
+            ],
+            OverlayKind::Ecdysis => &[
+                "src/tools/ecdysis/README.md",
+                "src/tools/ecdysis/LICENSE-APACHE",
+                "src/tools/ecdysis/LICENSE-MIT",
             ],
             OverlayKind::Miri => &[
                 "src/tools/miri/README.md",
@@ -84,6 +90,9 @@ impl OverlayKind {
             }
             OverlayKind::Clippy => {
                 builder.clippy_info.version(builder, &builder.release_num("clippy"))
+            }
+            OverlayKind::Ecdysis => {
+                builder.ecdysis_info.version(builder, &builder.release_num("ecdysis"))
             }
             OverlayKind::Miri => builder.miri_info.version(builder, &builder.release_num("miri")),
             OverlayKind::Rustfmt => {

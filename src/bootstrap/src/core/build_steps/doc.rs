@@ -1029,6 +1029,7 @@ tool_doc!(Rustdoc, "src/tools/rustdoc", crates = ["rustdoc", "rustdoc-json-types
 tool_doc!(Rustfmt, "src/tools/rustfmt", crates = ["rustfmt-nightly", "rustfmt-config_proc_macro"]);
 tool_doc!(Clippy, "src/tools/clippy", crates = ["clippy_config", "clippy_utils"]);
 tool_doc!(Miri, "src/tools/miri", crates = ["miri"]);
+tool_doc!(Ecdysis, "src/tools/ecdysis", crates = ["ecdysis"]);
 tool_doc!(
     Cargo,
     "src/tools/cargo",

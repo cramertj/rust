@@ -230,6 +230,7 @@ pub fn prepare_tool_cargo(
             || path.ends_with("clippy")
             || path.ends_with("miri")
             || path.ends_with("rustfmt")
+            || path.ends_with("ecdysis")
         {
             cargo.env("LIBZ_SYS_STATIC", "1");
         }
@@ -1252,6 +1253,12 @@ tool_extended!(Rustfmt {
     tool_name: "rustfmt",
     stable: true,
     add_bins_to_sysroot: ["rustfmt"]
+});
+tool_extended!(Ecdysis {
+    path: "src/tools/ecdysis",
+    tool_name: "ecdysis",
+    stable: false,
+    add_bins_to_sysroot: ["ecdysis"]
 });
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

@@ -396,6 +396,7 @@ pub struct Config {
     pub clippy_info: channel::GitInfo,
     pub miri_info: channel::GitInfo,
     pub rustfmt_info: channel::GitInfo,
+    pub ecdysis_info: channel::GitInfo,
     pub enzyme_info: channel::GitInfo,
     pub in_tree_llvm_info: channel::GitInfo,
     pub in_tree_gcc_info: channel::GitInfo,
@@ -1975,6 +1976,8 @@ impl Config {
         config.clippy_info =
             GitInfo::new(config.omit_git_hash, &config.src.join("src/tools/clippy"));
         config.miri_info = GitInfo::new(config.omit_git_hash, &config.src.join("src/tools/miri"));
+        config.ecdysis_info =
+            GitInfo::new(config.omit_git_hash, &config.src.join("src/tools/ecdysis"));
         config.rustfmt_info =
             GitInfo::new(config.omit_git_hash, &config.src.join("src/tools/rustfmt"));
         config.enzyme_info =
@@ -2547,7 +2550,7 @@ impl Config {
             Subcommand::Doc { .. } => {
                 flags.stage.or(doc_stage).unwrap_or(if download_rustc { 2 } else { 0 })
             }
-            Subcommand::Build => {
+            Subcommand::Build | Subcommand::Ecdysis { .. } => {
                 flags.stage.or(build_stage).unwrap_or(if download_rustc { 2 } else { 1 })
             }
             Subcommand::Test { .. } | Subcommand::Miri { .. } => {
@@ -2575,6 +2578,7 @@ impl Config {
             match config.cmd {
                 Subcommand::Test { .. }
                 | Subcommand::Miri { .. }
+                | Subcommand::Ecdysis { .. }
                 | Subcommand::Doc { .. }
                 | Subcommand::Build
                 | Subcommand::Bench { .. }

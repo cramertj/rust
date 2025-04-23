@@ -515,6 +515,7 @@ tool_check_step!(Rustdoc { path: "src/tools/rustdoc", alt_path: "src/librustdoc"
 // behavior, treat it as in-tree so that any new warnings in clippy will be
 // rejected.
 tool_check_step!(Clippy { path: "src/tools/clippy" });
+tool_check_step!(Ecdysis { path: "src/tools/ecdysis" });
 tool_check_step!(Miri { path: "src/tools/miri" });
 tool_check_step!(CargoMiri { path: "src/tools/miri/cargo-miri" });
 tool_check_step!(Rustfmt { path: "src/tools/rustfmt" });

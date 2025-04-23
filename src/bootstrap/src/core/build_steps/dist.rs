@@ -1476,6 +1476,54 @@ impl Step for Rustfmt {
 }
 
 #[derive(Debug, PartialOrd, Ord, Clone, Hash, PartialEq, Eq)]
+pub struct Ecdysis {
+    pub compiler: Compiler,
+    pub target: TargetSelection,
+}
+
+impl Step for Ecdysis {
+    type Output = Option<GeneratedTarball>;
+    const DEFAULT: bool = true;
+    const ONLY_HOSTS: bool = true;
+
+    fn should_run(run: ShouldRun<'_>) -> ShouldRun<'_> {
+        let default = should_build_extended_tool(run.builder, "ecdysis");
+        run.alias("ecdysis").default_condition(default)
+    }
+
+    fn make_run(run: RunConfig<'_>) {
+        run.builder.ensure(Ecdysis {
+            compiler: run.builder.compiler_for(
+                run.builder.top_stage,
+                run.builder.config.build,
+                run.target,
+            ),
+            target: run.target,
+        });
+    }
+
+    fn run(self, builder: &Builder<'_>) -> Option<GeneratedTarball> {
+        // This prevents ecdysis from being built for "dist" or "install"
+        // on the stable/beta channels. It is a nightly-only tool and should
+        // not be included.
+        if !builder.build.unstable_features() {
+            return None;
+        }
+        let compiler = self.compiler;
+        let target = self.target;
+
+        let ecdysis = builder.ensure(tool::Ecdysis { compiler, target });
+
+        let mut tarball = Tarball::new(builder, "ecdysis", &target.triple);
+        tarball.set_overlay(OverlayKind::Ecdysis);
+        tarball.is_preview(true);
+        tarball.add_file(&ecdysis.tool_path, "bin", FileType::Executable);
+        tarball.add_legal_and_readme_to("share/doc/ecdysis");
+        Some(tarball.generate())
+    }
+}
+
+#[derive(Debug, PartialOrd, Ord, Clone, Hash, PartialEq, Eq)]
 pub struct Extended {
     stage: u32,
     host: TargetSelection,

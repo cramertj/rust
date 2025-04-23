@@ -17,6 +17,7 @@ members = [
   "src/tools/collect-license-metadata",
   "src/tools/compiletest",
   "src/tools/coverage-dump",
+  "src/tools/ecdysis",
   "src/tools/features-status-dump",
   "src/tools/generate-copyright",
   "src/tools/generate-windows-sys",

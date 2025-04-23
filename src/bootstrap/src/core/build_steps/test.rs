@@ -685,6 +685,53 @@ impl Step for CargoMiri {
     }
 }
 
+/// Runs `cargo test` for ecdysis.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct EcdysisTest {
+    stage: u32,
+    host: TargetSelection,
+}
+
+impl Step for EcdysisTest {
+    type Output = ();
+    const ONLY_HOSTS: bool = true;
+
+    fn should_run(run: ShouldRun<'_>) -> ShouldRun<'_> {
+        run.path("src/tools/ecdysis")
+    }
+
+    fn make_run(run: RunConfig<'_>) {
+        run.builder.ensure(EcdysisTest { stage: run.builder.top_stage, host: run.target });
+    }
+
+    /// Runs `cargo test` for rustfmt.
+    fn run(self, builder: &Builder<'_>) {
+        let stage = self.stage;
+        let host = self.host;
+        let compiler = builder.compiler(stage, host);
+
+        let tool_result = builder.ensure(tool::Ecdysis { compiler, target: self.host });
+        let compiler = tool_result.build_compiler;
+
+        let mut cargo = tool::prepare_tool_cargo(
+            builder,
+            compiler,
+            Mode::ToolRustc,
+            host,
+            Kind::Test,
+            "src/tools/ecdysis",
+            SourceType::InTree,
+            &[],
+        );
+
+        let dir = testdir(builder, compiler.host);
+        t!(fs::create_dir_all(&dir));
+        cargo.env("ECDYSIS_TEST_DIR", dir);
+        cargo.add_rustc_lib_path(builder);
+        run_cargo_test(cargo, &[], &[], "ecdysis", host, builder);
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct CompiletestTest {
     host: TargetSelection,

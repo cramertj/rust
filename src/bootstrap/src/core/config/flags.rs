@@ -402,6 +402,11 @@ pub enum Subcommand {
         /// don't capture stdout/stderr of tests
         no_capture: bool,
     },
+
+    // TODO(ecdysis)
+    /// Build a target using Ecdysis.
+    Ecdysis {},
+
     /// Build and run some test suites *in Miri*
     Miri {
         #[arg(long)]
@@ -496,6 +501,7 @@ impl Subcommand {
             Subcommand::Build => Kind::Build,
             Subcommand::Check { .. } => Kind::Check,
             Subcommand::Clippy { .. } => Kind::Clippy,
+            Subcommand::Ecdysis { .. } => Kind::Ecdysis,
             Subcommand::Doc { .. } => Kind::Doc,
             Subcommand::Fix => Kind::Fix,
             Subcommand::Format { .. } => Kind::Format,

@@ -161,6 +161,7 @@ pub struct Build {
     clippy_info: GitInfo,
     miri_info: GitInfo,
     rustfmt_info: GitInfo,
+    ecdysis_info: GitInfo,
     enzyme_info: GitInfo,
     in_tree_llvm_info: GitInfo,
     in_tree_gcc_info: GitInfo,
@@ -359,6 +360,7 @@ impl Build {
         let clippy_info = config.clippy_info.clone();
         let miri_info = config.miri_info.clone();
         let rustfmt_info = config.rustfmt_info.clone();
+        let ecdysis_info = config.ecdysis_info.clone();
         let enzyme_info = config.enzyme_info.clone();
         let in_tree_llvm_info = config.in_tree_llvm_info.clone();
         let in_tree_gcc_info = config.in_tree_gcc_info.clone();
@@ -430,6 +432,7 @@ impl Build {
             clippy_info,
             miri_info,
             rustfmt_info,
+            ecdysis_info,
             enzyme_info,
             in_tree_llvm_info,
             in_tree_gcc_info,
