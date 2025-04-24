@@ -86,7 +86,7 @@ impl rustc_driver::Callbacks for EcdysisCallbacks {
 }
 
 fn main() {
-    let rustc_args: Vec<String> = vec!["".into()];
+    let rustc_args: Vec<String> = std::env::args().collect();
     let mut driver_callbacks = EcdysisCallbacks {};
 
     // The Rust compiler unwinds with a special sentinel value to abort compilation on

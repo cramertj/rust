@@ -1406,12 +1406,12 @@ impl<'test> TestCx<'test> {
     ) -> Command {
         let is_aux = input_file.components().map(|c| c.as_os_str()).any(|c| c == "auxiliary");
         let is_rustdoc = self.is_rustdoc() && !is_aux;
-        let mut rustc = if !is_rustdoc {
-            Command::new(&self.config.rustc_path)
+        let mut rustc = if is_rustdoc {
+            Command::new(&self.config.rustdoc_path.clone().expect("no rustdoc built yet"))
         } else if self.config.suite.as_str() == "ecdysis-ui" {
             Command::new(&self.config.ecdysis_path.clone().expect("no ecdysis built yet"))
         } else {
-            Command::new(&self.config.rustdoc_path.clone().expect("no rustdoc built yet"))
+            Command::new(&self.config.rustc_path)
         };
         rustc.arg(input_file);
 
