@@ -69,6 +69,7 @@ pub fn parse_config(args: Vec<String>) -> Config {
             "PATH",
         )
         .optopt("", "rustdoc-path", "path to rustdoc to use for compiling", "PATH")
+        .optopt("", "ecdysis-path", "path to ecdysis to use for compiling", "PATH")
         .optopt("", "coverage-dump-path", "path to coverage-dump to use in tests", "PATH")
         .reqopt("", "python", "path to python to use for doc tests", "PATH")
         .optopt("", "jsondocck-path", "path to jsondocck to use for doc tests", "PATH")
@@ -340,6 +341,7 @@ pub fn parse_config(args: Vec<String>) -> Config {
         cargo_path: matches.opt_str("cargo-path").map(Utf8PathBuf::from),
         stage0_rustc_path: matches.opt_str("stage0-rustc-path").map(Utf8PathBuf::from),
         rustdoc_path: matches.opt_str("rustdoc-path").map(Utf8PathBuf::from),
+        ecdysis_path: matches.opt_str("ecdysis-path").map(Utf8PathBuf::from),
         coverage_dump_path: matches.opt_str("coverage-dump-path").map(Utf8PathBuf::from),
         python: matches.opt_str("python").unwrap(),
         jsondocck_path: matches.opt_str("jsondocck-path"),

@@ -704,7 +704,7 @@ impl Step for EcdysisTest {
         run.builder.ensure(EcdysisTest { stage: run.builder.top_stage, host: run.target });
     }
 
-    /// Runs `cargo test` for rustfmt.
+    /// Runs `cargo test` for ecdysis.
     fn run(self, builder: &Builder<'_>) {
         let stage = self.stage;
         let host = self.host;
@@ -1404,6 +1404,8 @@ test!(RustdocJson {
     only_hosts: true,
 });
 
+test!(EcdysisUi { path: "tests/ecdysis-ui", mode: "ui", suite: "ecdysis-ui", default: true });
+
 test!(Pretty {
     path: "tests/pretty",
     mode: "pretty",
@@ -1728,6 +1730,11 @@ NOTE: if you're sure you want to do this, please open an issue as to why. In the
             cmd.arg("--jsondoclint-path").arg(
                 builder.ensure(tool::JsonDocLint { compiler: json_compiler, target }).tool_path,
             );
+        }
+
+        if mode == "ui" && suite == "ecdysis-ui" {
+            cmd.arg("--ecdysis-path")
+                .arg(builder.ensure(tool::Ecdysis { compiler, target }).tool_path);
         }
 
         if matches!(mode, "coverage-map" | "coverage-run") {

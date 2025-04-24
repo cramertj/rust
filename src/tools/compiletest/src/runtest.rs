@@ -1408,6 +1408,8 @@ impl<'test> TestCx<'test> {
         let is_rustdoc = self.is_rustdoc() && !is_aux;
         let mut rustc = if !is_rustdoc {
             Command::new(&self.config.rustc_path)
+        } else if self.config.suite.as_str() == "ecdysis-ui" {
+            Command::new(&self.config.ecdysis_path.clone().expect("no ecdysis built yet"))
         } else {
             Command::new(&self.config.rustdoc_path.clone().expect("no rustdoc built yet"))
         };

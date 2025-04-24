@@ -99,6 +99,7 @@ pub fn check(
 
     walk_many(
         &[
+            &tests_path.join("ecdysis-ui"),
             &tests_path.join("ui"),
             &tests_path.join("ui-fulldeps"),
             &tests_path.join("rustdoc-ui"),

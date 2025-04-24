@@ -199,6 +199,9 @@ pub struct Config {
     /// The rustdoc executable.
     pub rustdoc_path: Option<Utf8PathBuf>,
 
+    /// The ecdysis executable.
+    pub ecdysis_path: Option<Utf8PathBuf>,
+
     /// The coverage-dump executable.
     pub coverage_dump_path: Option<Utf8PathBuf>,
 
