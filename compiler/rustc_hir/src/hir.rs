@@ -4027,6 +4027,9 @@ impl<'hir> Item<'hir> {
         expect_ty_alias, (Ident, &'hir Ty<'hir>, &'hir Generics<'hir>),
             ItemKind::TyAlias(ident, ty, generics), (*ident, ty, generics);
 
+        expect_provided_ty, (DefId, Option<&'hir GenericArgs<'hir>>, &'hir [ProvidedTyRemainingPathSegment<'hir>]),
+            ItemKind::ProvidedTy { provider_def_id, generic_args, remaining_path }, (*provider_def_id, *generic_args, remaining_path);
+
         expect_enum, (Ident, &EnumDef<'hir>, &'hir Generics<'hir>),
             ItemKind::Enum(ident, def, generics), (*ident, def, generics);
 

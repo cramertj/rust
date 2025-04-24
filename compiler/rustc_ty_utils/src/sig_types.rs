@@ -42,7 +42,8 @@ pub fn walk_types<'tcx, V: SpannedTypeVisitor<'tcx>>(
             }
         }
         // Walk over the type behind the alias
-        DefKind::TyAlias { .. } | DefKind::AssocTy |
+        // FIXME(ecdysis): Should we ever visit the parameters to the provider?
+        DefKind::TyAlias { .. } | DefKind::AssocTy | DefKind::ProvidedTy |
         // Walk over the type of the item
         DefKind::Static { .. } | DefKind::Const | DefKind::AssocConst | DefKind::AnonConst => {
             if let Some(ty) = tcx.hir_node_by_def_id(item).ty() {
@@ -116,15 +117,8 @@ pub fn walk_types<'tcx, V: SpannedTypeVisitor<'tcx>>(
                 "{kind:?} has not seen any uses of `walk_types` yet, ping oli-obk if you'd like any help"
             )
         }
-        DefKind::ProvidedTy
-        | DefKind::TyProvider => {
-            span_bug!(
-                tcx.def_span(item),
-                // FIXME(ecdysis) walk types?
-                "`walk_types` on {kind:?} is not yet supported"
-            )
-        }
         // These don't have any types, but are visited during privacy checking.
+        | DefKind::TyProvider
         | DefKind::ExternCrate
         | DefKind::ForeignMod
         | DefKind::ForeignTy

@@ -1,8 +1,0 @@
-error: provided types are not yet supported
-  --> $DIR/provider.rs:5:19
-   |
-LL |     let provided: Provided<i32> = ();
-   |                   ^^^^^^^^^^^^^
-
-error: aborting due to 1 previous error
-

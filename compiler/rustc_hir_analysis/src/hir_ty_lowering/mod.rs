@@ -2109,18 +2109,9 @@ impl<'tcx> dyn HirTyLowerer<'tcx> + '_ {
                 );
                 self.lower_path_segment(span, did, path.segments.last().unwrap())
             }
-            Res::Def(DefKind::ProvidedTy, def_id) => {
+            Res::Def(DefKind::ProvidedTy, _def_id) => {
                 // FIXME(ecdysis) lower to the actual expanded type
-                let mut err =
-                    self.dcx().struct_span_err(path.span, "provided types are not yet supported");
-                if let Some(hir::Node::Item(&hir::Item {
-                    kind: hir::ItemKind::Impl(impl_), ..
-                })) = tcx.hir_get_if_local(def_id)
-                {
-                    err.span_note(impl_.self_ty.span, "not yet supported");
-                }
-                let reported = err.emit();
-                Ty::new_error(tcx, reported)
+                Ty::new_uint(tcx, ty::UintTy::Usize)
             }
             Res::Def(DefKind::TyProvider, def_id) => {
                 // FIXME(ecdysis) ???
