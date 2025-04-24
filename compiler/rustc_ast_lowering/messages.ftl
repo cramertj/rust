@@ -56,16 +56,6 @@ ast_lowering_coroutine_too_many_parameters =
 ast_lowering_default_field_in_tuple = default fields are not supported in tuple structs
     .label = default fields are only supported on structs
 
-ast_lowering_provider_with_generics = provider types cannot be defined with generics
-    .label = provider type generics are handled by plugins, and cannot be defined inline
-    .suggestion = remove the generics
-
-ast_lowering_provider_with_assigned_type = provider types cannot be assigned
-    .label = provider types are defined by plugins, and cannot be assigned inline
-    .suggestion = remove the assigned type
-
-ast_lowering_provider_ty_no_parenthesied_generics = type providers do not accept parenthesized (`Fn`-style) generics
-
 ast_lowering_does_not_support_modifiers =
     the `{$class_name}` register class does not support template modifiers
 
@@ -152,6 +142,16 @@ ast_lowering_never_pattern_with_guard =
 ast_lowering_no_precise_captures_on_apit = `use<...>` precise capturing syntax not allowed in argument-position `impl Trait`
 
 ast_lowering_previously_used_here = previously used here
+
+ast_lowering_provider_ty_no_parenthesied_generics = type providers do not accept parenthesized (`Fn`-style) generics
+
+ast_lowering_provider_with_assigned_type = provider types cannot be assigned
+    .label = provider types are defined by plugins, and cannot be assigned inline
+    .suggestion = remove the assigned type
+
+ast_lowering_provider_with_generics = provider types cannot be defined with generics
+    .label = provider type generics are handled by plugins, and cannot be defined inline
+    .suggestion = remove the generics
 
 ast_lowering_register1 = register `{$reg1_name}`
 

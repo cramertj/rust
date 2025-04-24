@@ -50,9 +50,6 @@ hir_analysis_bad_precise_capture = expected {$kind} parameter in `use<...>` prec
 
 hir_analysis_bad_return_type_notation_position = return type notation not allowed in this position yet
 
-hir_analysis_unresolved_provider_type = type provider with id `{$id}` was not resolved before lowering
-    .label = type providers must be resolved to concrete types before they are lowered
-
 hir_analysis_cannot_capture_late_bound_const =
     cannot capture late-bound const parameter in {$what}
     .label = parameter defined here
@@ -579,6 +576,9 @@ hir_analysis_unrecognized_intrinsic_function =
     unrecognized intrinsic function: `{$name}`
     .label = unrecognized intrinsic
     .help = if you're adding an intrinsic, be sure to update `check_intrinsic_type`
+
+hir_analysis_unresolved_provider_type = type provider with id `{$id}` was not resolved before lowering
+    .label = type providers must be resolved to concrete types before they are lowered
 
 hir_analysis_unused_associated_type_bounds =
     unnecessary associated type bound for dyn-incompatible associated type
