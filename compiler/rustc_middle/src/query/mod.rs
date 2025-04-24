@@ -176,6 +176,7 @@ rustc_queries! {
     query hir_owner(key: LocalDefId) -> rustc_hir::MaybeOwner<'tcx> {
         no_hash
         desc { |tcx| "getting HIR of `{}`", tcx.def_path_str(key) }
+        feedable
     }
 
     /// All items in the crate.
