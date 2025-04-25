@@ -119,22 +119,25 @@ pub(super) fn provided_item_args(tcx: TyCtxt<'_>, def_id: LocalDefId) -> &'_ ty:
 
     let icx = ItemCtxt::new(tcx, def_id);
 
-    let (_ty_id, args, _projections) =
+    let (_ty_id, args, projections) =
         tcx.hir_item(ItemId { owner_id: hir_id.expect_owner() }).expect_provided_ty();
 
     let mut lowered_args = Vec::new();
-    if let Some(args) = args {
-        for arg in args.args {
-            let ty = if let &GenericArg::Type(ty) = arg {
-                // FIXME(ecdysis): ??
-                icx.lower_ty(ty.as_unambig_ty())
-            } else {
-                // FIXME(ecdysis): Support non-type arguments
-                let reported = icx.dcx().span_err(tcx.def_span(def_id), "invalid generic argument");
-                Ty::new_error(tcx, reported)
-            };
-            lowered_args.push(ty);
-        }
+    for arg in args
+        .map(|a| a.args)
+        .into_iter()
+        .chain(projections.iter().map(|p| p.args.map(|a| a.args)).flatten())
+        .flatten()
+    {
+        let ty = if let &GenericArg::Type(ty) = arg {
+            // FIXME(ecdysis): ??
+            icx.lower_ty(ty.as_unambig_ty())
+        } else {
+            // FIXME(ecdysis): Support non-type arguments
+            let reported = icx.dcx().span_err(tcx.def_span(def_id), "invalid generic argument");
+            Ty::new_error(tcx, reported)
+        };
+        lowered_args.push(ty);
     }
     tcx.mk_type_list(&*lowered_args)
 }

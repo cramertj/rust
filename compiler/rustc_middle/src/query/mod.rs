@@ -294,6 +294,8 @@ rustc_queries! {
         }
     }
 
+    /// Arguments to the provided item. This includes all arguments to
+    /// projections from the provided item, flattened into a single list.
     query provided_item_args(key: DefId) -> &'tcx ty::List<Ty<'tcx>> {
         desc { |tcx|
             "computing provided item arguments for `{path}`",
@@ -304,7 +306,6 @@ rustc_queries! {
     }
 
     /// Resolves the provided item path to the underlying item.
-    /// key is provider
     query resolved_provided_item(key: DefId) -> Option<DefId> {
         desc { |tcx|
             "building provided item `{path}`",
