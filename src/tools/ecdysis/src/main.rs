@@ -11,9 +11,9 @@ extern crate rustc_span;
 use rustc_ast::Crate;
 use rustc_driver::{Compilation, catch_fatal_errors, run_compiler};
 use rustc_hir::def::{DefKind, Res};
-use rustc_hir::def_id::DefId;
+use rustc_hir::def_id::{DefId, LocalDefId};
 use rustc_hir::intravisit::{Visitor, walk_item, walk_qpath};
-use rustc_hir::{self as hir, HirId, ItemId, OwnerId};
+use rustc_hir::{self as hir, HirId};
 use rustc_interface::interface::{Compiler, Config};
 use rustc_middle::ty::{self, TyCtxt};
 use rustc_middle::util::Providers;
@@ -34,18 +34,18 @@ fn override_queries(_session: &Session, providers: &mut Providers) {
     };
 }
 
-fn resolve_provided_item(tcx: TyCtxt<'_>, def_id: DefId) -> Option<DefId> {
-    let def_id = def_id.expect_local();
-    let item_id = ItemId { owner_id: OwnerId { def_id } };
-    let (_ty_id, _args, _projections) = tcx.hir_item(item_id).expect_provided_ty();
+fn resolve_provided_item(tcx: TyCtxt<'_>, def_id: LocalDefId) -> Option<DefId> {
     let span = tcx.def_span(def_id);
+    let dcx = tcx.dcx();
 
-    // For now, lower to type alias to `usize`.
+    let &[arg] = tcx.provided_item_args(def_id).as_slice() else {
+        dcx.span_err(span, "expected exactly one argument");
+        return None;
+    };
+
+    // For now, act like a type alias to the provided argument.
     let ty_def = tcx.at(span).create_def(def_id, Some(kw::Empty), DefKind::TyAlias);
-    ty_def.type_of(ty::EarlyBinder::bind(rustc_middle::ty::Ty::new_uint(
-        tcx,
-        rustc_middle::ty::UintTy::Usize,
-    )));
+    ty_def.type_of(ty::EarlyBinder::bind(arg));
     ty_def.feed_hir();
 
     Some(ty_def.def_id().to_def_id())

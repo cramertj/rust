@@ -95,7 +95,6 @@ pub use errors::NoVariantNamed;
 use rustc_abi::ExternAbi;
 use rustc_hir as hir;
 use rustc_hir::def::DefKind;
-use rustc_hir::def_id::DefId;
 use rustc_middle::middle;
 use rustc_middle::mir::interpret::GlobalId;
 use rustc_middle::query::Providers;
@@ -172,7 +171,6 @@ pub fn provide(providers: &mut Providers) {
         inherit_sig_for_delegation_item: delegation::inherit_sig_for_delegation_item,
         enforce_impl_non_lifetime_params_are_constrained:
             impl_wf_check::enforce_impl_non_lifetime_params_are_constrained,
-        resolved_provided_item,
         ..*providers
     };
 }
@@ -267,8 +265,4 @@ pub fn lower_const_arg_for_rustdoc<'tcx>(
 ) -> Const<'tcx> {
     let env_def_id = tcx.hir_get_parent_item(hir_ct.hir_id);
     collect::ItemCtxt::new(tcx, env_def_id.def_id).lowerer().lower_const_arg(hir_ct, feed)
-}
-
-fn resolved_provided_item<'tcx>(_tcx: TyCtxt<'tcx>, _item_def_id: DefId) -> Option<DefId> {
-    None
 }

@@ -294,12 +294,24 @@ rustc_queries! {
         }
     }
 
+    query provided_item_args(key: DefId) -> &'tcx ty::List<Ty<'tcx>> {
+        desc { |tcx|
+            "computing provided item arguments for `{path}`",
+            path = tcx.def_path_str(key),
+        }
+        cache_on_disk_if { key.is_local() }
+        separate_provide_extern
+    }
+
     /// Resolves the provided item path to the underlying item.
+    /// key is provider
     query resolved_provided_item(key: DefId) -> Option<DefId> {
         desc { |tcx|
             "building provided item `{path}`",
             path = tcx.def_path_str(key),
         }
+        cache_on_disk_if { key.is_local() }
+        separate_provide_extern
     }
 
     /// Returns whether the type alias given by `DefId` is lazy.

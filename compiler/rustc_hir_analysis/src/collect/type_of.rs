@@ -111,6 +111,42 @@ fn const_arg_anon_type_of<'tcx>(icx: &ItemCtxt<'tcx>, arg_hir_id: HirId, span: S
     }
 }
 
+pub(super) fn provided_item_args(tcx: TyCtxt<'_>, def_id: LocalDefId) -> &'_ ty::List<Ty<'_>> {
+    use rustc_hir::*;
+    use rustc_middle::ty::Ty;
+
+    let hir_id = tcx.local_def_id_to_hir_id(def_id);
+
+    let icx = ItemCtxt::new(tcx, def_id);
+
+    let (_ty_id, args, _projections) =
+        tcx.hir_item(ItemId { owner_id: hir_id.expect_owner() }).expect_provided_ty();
+
+    let mut lowered_args = Vec::new();
+    if let Some(args) = args {
+        for arg in args.args {
+            let ty = if let &GenericArg::Type(ty) = arg {
+                // FIXME(ecdysis): ??
+                icx.lower_ty(ty.as_unambig_ty())
+            } else {
+                // FIXME(ecdysis): Support non-type arguments
+                let reported = icx.dcx().span_err(tcx.def_span(def_id), "invalid generic argument");
+                Ty::new_error(tcx, reported)
+            };
+            lowered_args.push(ty);
+        }
+    }
+    tcx.mk_type_list(&*lowered_args)
+}
+
+pub(super) fn resolved_provided_item<'tcx>(
+    _tcx: TyCtxt<'tcx>,
+    _item_def_id: LocalDefId,
+) -> Option<DefId> {
+    // This query is expected to be overridden by the driver plugin.
+    None
+}
+
 pub(super) fn type_of(tcx: TyCtxt<'_>, def_id: LocalDefId) -> ty::EarlyBinder<'_, Ty<'_>> {
     use rustc_hir::*;
     use rustc_middle::ty::Ty;
