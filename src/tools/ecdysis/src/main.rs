@@ -10,31 +10,54 @@ extern crate rustc_span;
 
 use rustc_ast::Crate;
 use rustc_driver::{Compilation, catch_fatal_errors, run_compiler};
-use rustc_hir::intravisit::Visitor;
+use rustc_hir::def::{DefKind, Res};
+use rustc_hir::def_id::DefId;
+use rustc_hir::intravisit::{Visitor, walk_item, walk_qpath};
+use rustc_hir::{self as hir, HirId, ItemId, OwnerId};
 use rustc_interface::interface::{Compiler, Config};
-use rustc_middle::hir;
-use rustc_middle::ty::TyCtxt;
+use rustc_middle::ty::{self, TyCtxt};
 use rustc_middle::util::Providers;
 use rustc_session::Session;
 use rustc_session::parse::ParseSess;
 use rustc_span::fatal_error::FatalError;
+use rustc_span::{Span, kw};
 
 struct EcdysisCallbacks {
     // FIXME probably some state :)
 }
 
-fn override_queries(_session: &Session, _providers: &mut Providers) {
+fn override_queries(_session: &Session, providers: &mut Providers) {
     // FIXME override as-needed? maybe we won't need this if we can feed everything?
+    providers.queries = rustc_middle::query::Providers {
+        resolved_provided_item: |tcx, def_id| resolve_provided_item(tcx, def_id),
+        ..providers.queries
+    };
 }
 
-#[expect(dead_code)]
+fn resolve_provided_item(tcx: TyCtxt<'_>, def_id: DefId) -> Option<DefId> {
+    let def_id = def_id.expect_local();
+    let item_id = ItemId { owner_id: OwnerId { def_id } };
+    let (_ty_id, _args, _projections) = tcx.hir_item(item_id).expect_provided_ty();
+    let span = tcx.def_span(def_id);
+
+    // For now, lower to type alias to `usize`.
+    let ty_def = tcx.at(span).create_def(def_id, Some(kw::Empty), DefKind::TyAlias);
+    ty_def.type_of(ty::EarlyBinder::bind(rustc_middle::ty::Ty::new_uint(
+        tcx,
+        rustc_middle::ty::UintTy::Usize,
+    )));
+    ty_def.feed_hir();
+
+    Some(ty_def.def_id().to_def_id())
+}
+
 struct TyProviderCollector<'tcx> {
     tcx: TyCtxt<'tcx>,
     // parent_type_bodies: ,
 }
 
 impl<'tcx> Visitor<'tcx> for TyProviderCollector<'tcx> {
-    type NestedFilter = hir::nested_filter::All;
+    type NestedFilter = rustc_middle::hir::nested_filter::All;
     fn maybe_tcx(&mut self) -> Self::MaybeTyCtxt {
         self.tcx
     }
@@ -45,6 +68,33 @@ impl<'tcx> Visitor<'tcx> for TyProviderCollector<'tcx> {
     // forward declarations where possible).
     //
     // There's some similar logic today in cc_bindings_from_rs.
+
+    fn visit_qpath(
+        &mut self,
+        qpath: &'tcx hir::QPath<'tcx>,
+        id: HirId,
+        _span: Span,
+    ) -> Self::Result {
+        walk_qpath(self, qpath, id);
+        let hir::QPath::Resolved(_, path) = qpath else {
+            return;
+        };
+        let Res::Def(DefKind::ProvidedTy, _def_id) = path.res else {
+            return;
+        };
+        // dbg!(_path, _def_id);
+        // FIXME: record the ProvidedTy and its input type generics.
+    }
+
+    fn visit_item(&mut self, item: &'tcx rustc_hir::Item<'tcx>) {
+        walk_item(self, item);
+        match item.kind {
+            rustc_hir::ItemKind::TyProvider { .. } => {
+                // dbg!("TyProvider", item);
+            }
+            _ => {}
+        }
+    }
 }
 
 impl rustc_driver::Callbacks for EcdysisCallbacks {
@@ -72,14 +122,16 @@ impl rustc_driver::Callbacks for EcdysisCallbacks {
         Compilation::Continue
     }
 
-    fn after_expansion<'tcx>(&mut self, _compiler: &Compiler, _tcx: TyCtxt<'tcx>) -> Compilation {
+    fn after_expansion<'tcx>(&mut self, _compiler: &Compiler, tcx: TyCtxt<'tcx>) -> Compilation {
         // FIXME(ecdysis): For each use of a `TyProvider` in a path, record its generic parameters.
-        // tcx.hir_walktoplevel_module(visitor);
+        let mut visitor = TyProviderCollector { tcx };
+        tcx.hir_walk_toplevel_module(&mut visitor);
 
         // pluto incremental build for dynamic deps? https://www.pl.informatik.uni-mainz.de/files/2019/04/pluto-incremental-build.pdf
         // tcx.at().create_def();
         Compilation::Continue
     }
+
     fn after_analysis<'tcx>(&mut self, _compiler: &Compiler, _tcx: TyCtxt<'tcx>) -> Compilation {
         Compilation::Continue
     }

@@ -2109,9 +2109,13 @@ impl<'tcx> dyn HirTyLowerer<'tcx> + '_ {
                 );
                 self.lower_path_segment(span, did, path.segments.last().unwrap())
             }
-            Res::Def(DefKind::ProvidedTy, _def_id) => {
-                // FIXME(ecdysis) lower to the actual expanded type
-                Ty::new_uint(tcx, ty::UintTy::Usize)
+            Res::Def(DefKind::ProvidedTy, def_id) => {
+                let Some(resolved) = tcx.resolved_provided_item(def_id) else {
+                    let reported =
+                        self.dcx().span_delayed_bug(path.span, "ProvidedTy was not resolved");
+                    return Ty::new_error(tcx, reported);
+                };
+                tcx.type_of(resolved).no_bound_vars().unwrap()
             }
             Res::Def(DefKind::TyProvider, def_id) => {
                 // FIXME(ecdysis) ???

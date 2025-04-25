@@ -294,6 +294,14 @@ rustc_queries! {
         }
     }
 
+    /// Resolves the provided item path to the underlying item.
+    query resolved_provided_item(key: DefId) -> Option<DefId> {
+        desc { |tcx|
+            "building provided item `{path}`",
+            path = tcx.def_path_str(key),
+        }
+    }
+
     /// Returns whether the type alias given by `DefId` is lazy.
     ///
     /// I.e., if the type alias expands / ought to expand to a [weak] [alias type]
