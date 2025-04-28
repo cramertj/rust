@@ -9,4 +9,7 @@ fn main() {
     let provided: Provided<usize> = "12345".parse().unwrap();
     let provided: usize = provided;
     assert_eq!(provided, 12345);
+
+    let nested: Provided<Provided<u8>> = 6;
+    let _nested: u8 = nested;
 }
