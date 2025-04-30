@@ -1,6 +1,6 @@
 //@ run-pass
 
-#[provider(id = "some_magic_id")]
+#[provider(id = "return_arg_ty")]
 type Provided;
 
 fn main() {
