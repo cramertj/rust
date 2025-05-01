@@ -4,10 +4,12 @@ extern crate rustc_ast;
 extern crate rustc_driver;
 extern crate rustc_hir;
 extern crate rustc_index;
+extern crate rustc_infer;
 extern crate rustc_interface;
 extern crate rustc_middle;
 extern crate rustc_session;
 extern crate rustc_span;
+extern crate rustc_trait_selection;
 
 use rustc_ast::Crate;
 use rustc_driver::{Compilation, catch_fatal_errors, run_compiler};
@@ -16,7 +18,10 @@ use rustc_hir::def_id::{DefId, LocalDefId};
 use rustc_hir::intravisit::{Visitor, walk_item, walk_qpath};
 use rustc_hir::{self as hir, HirId};
 use rustc_index::IndexVec;
+use rustc_infer::infer::TyCtxtInferExt;
 use rustc_interface::interface::{Compiler, Config};
+use rustc_middle::query::ProvidedItemRequest;
+use rustc_middle::traits::ObligationCause;
 use rustc_middle::ty::{self, TyCtxt};
 use rustc_middle::util::Providers;
 use rustc_session::Session;
@@ -32,6 +37,7 @@ fn override_queries(_session: &Session, providers: &mut Providers) {
     // FIXME override as-needed? maybe we won't need this if we can feed everything?
     providers.queries = rustc_middle::query::Providers {
         resolved_provided_item: |tcx, def_id| resolve_provided_item(tcx, def_id),
+        create_or_fetch_provided_item: |tcx, key| create_provided_item(tcx, key),
         ..providers.queries
     };
 }
@@ -41,11 +47,31 @@ mod providers {
     pub const NEW_DEF: &str = "wrapper_struct";
 }
 
-fn resolve_provided_item(tcx: TyCtxt<'_>, def_id: LocalDefId) -> Option<DefId> {
-    let span = tcx.def_span(def_id);
-    let dcx = tcx.dcx();
+fn normalize_generic_args<'tcx>(
+    tcx: TyCtxt<'tcx>,
+    def_id: LocalDefId,
+    generic_args: &[ty::Ty<'tcx>],
+) -> &'tcx ty::List<ty::Ty<'tcx>> {
+    let (infcx, param_env) = tcx
+        .infer_ctxt()
+        .with_next_trait_solver(true)
+        // We can't support lifetimes since C++ won't respect them.
+        .ignoring_regions()
+        // FIXME(ecdysis): This is wrong, but opaque type definitions can wait.
+        .build_with_typing_env(ty::TypingEnv::non_body_analysis(tcx, def_id));
+    let dummy_obligation_cause = ObligationCause::dummy();
+    let at = infcx.at(&dummy_obligation_cause, param_env);
+    tcx.mk_type_list_from_iter(generic_args.iter().map(|&arg| {
+        rustc_trait_selection::solve::deeply_normalize::<
+            _,
+            rustc_trait_selection::traits::ScrubbedTraitError<'tcx>,
+        >(at, arg)
+        .unwrap()
+    }))
+}
 
-    let (provider_def_id, hir_generic_args, _remaining_path) =
+fn resolve_provided_item<'tcx>(tcx: TyCtxt<'tcx>, def_id: LocalDefId) -> Option<DefId> {
+    let (provider_def_id, _hir_generic_args, _remaining_path) =
         tcx.hir_node_by_def_id(def_id).expect_item().expect_provided_ty();
 
     let hir::ItemKind::TyProvider { provider_id, ident: _ } =
@@ -55,7 +81,24 @@ fn resolve_provided_item(tcx: TyCtxt<'_>, def_id: LocalDefId) -> Option<DefId> {
     };
 
     let generic_args = tcx.provided_item_args(def_id);
+    let normalized_args = normalize_generic_args(tcx, def_id, generic_args);
+    tcx.create_or_fetch_provided_item(ProvidedItemRequest {
+        usage_id: def_id.into(),
+        provider_id,
+        generic_args: normalized_args,
+    })
+}
 
+fn create_provided_item<'tcx>(
+    tcx: TyCtxt<'tcx>,
+    request: ProvidedItemRequest<'tcx>,
+) -> Option<DefId> {
+    let ProvidedItemRequest { usage_id: def_id, provider_id, generic_args } = request;
+    let def_id = def_id.as_local().unwrap();
+    let span = tcx.def_span(def_id);
+    let dcx = tcx.dcx();
+    let (provider_def_id, hir_generic_args, _remaining_path) =
+        tcx.hir_node_by_def_id(def_id).expect_item().expect_provided_ty();
     match provider_id.as_str() {
         providers::RETURN_ARG_TY => {
             let &[arg] = generic_args.as_slice() else {

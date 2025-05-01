@@ -2,9 +2,11 @@
 
 use std::ffi::OsStr;
 
+use rustc_data_structures::stable_hasher::{HashStable, StableHasher};
 use rustc_hir::def_id::{CrateNum, DefId, LOCAL_CRATE, LocalDefId, LocalModDefId, ModDefId};
 use rustc_hir::hir_id::{HirId, OwnerId};
 use rustc_query_system::dep_graph::DepNodeIndex;
+use rustc_query_system::ich::StableHashingContext;
 use rustc_query_system::query::{DefIdCache, DefaultCache, SingleCache, VecCache};
 use rustc_span::{DUMMY_SP, Ident, Span, Symbol};
 
@@ -497,6 +499,66 @@ impl Key for Option<Symbol> {
 
     fn default_span(&self, _tcx: TyCtxt<'_>) -> Span {
         DUMMY_SP
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct ProvidedItemRequest<'tcx> {
+    // FIXME(ecdysis): `usage_id` is *not* a part of the cache key: the
+    // PartialEq/Eq/Hash impls omit it.
+    //
+    // Whichever provided type usage is requested and returned first will be
+    // the one whose HIR is used to create the provided item that will then
+    // be used by all subsequent provided types.
+    //
+    // This is sketchy and might result in some strange non-determinism
+    // depending on which instance of `Provider<...>` is instantiated first.
+    //
+    // Instead, we should probably create a "de-lowering" from the ty::Ty
+    // args back up to fake HIR types, then use those instead of the ones from
+    // the original invocation.
+    pub usage_id: DefId,
+    pub provider_id: Symbol,
+    pub generic_args: &'tcx ty::List<Ty<'tcx>>,
+}
+
+impl<'tcx> PartialEq for ProvidedItemRequest<'tcx> {
+    fn eq(&self, other: &Self) -> bool {
+        self.provider_id == other.provider_id && self.generic_args == other.generic_args
+    }
+}
+
+impl<'tcx> Eq for ProvidedItemRequest<'tcx> {}
+
+impl<'tcx> std::hash::Hash for ProvidedItemRequest<'tcx> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.provider_id.hash(state);
+        self.generic_args.hash(state);
+    }
+}
+
+impl<'a, 'tcx> HashStable<StableHashingContext<'a>> for ProvidedItemRequest<'tcx> {
+    #[inline]
+    fn hash_stable(&self, hcx: &mut StableHashingContext<'a>, hasher: &mut StableHasher) {
+        self.provider_id.hash_stable(hcx, hasher);
+        self.generic_args.hash_stable(hcx, hasher);
+    }
+}
+
+impl<'tcx> Key for ProvidedItemRequest<'tcx> {
+    type Cache<V> = DefaultCache<Self, V>;
+
+    fn default_span(&self, _tcx: TyCtxt<'_>) -> Span {
+        DUMMY_SP
+    }
+}
+
+impl<'tcx> AsLocalKey for ProvidedItemRequest<'tcx> {
+    type LocalKey = Self;
+
+    #[inline(always)]
+    fn as_local_key(&self) -> Option<Self::LocalKey> {
+        Some(*self)
     }
 }
 

@@ -89,7 +89,7 @@ use crate::{dep_graph, mir, thir};
 mod arena_cached;
 pub mod erase;
 mod keys;
-pub use keys::{AsLocalKey, Key, LocalCrate};
+pub use keys::{AsLocalKey, Key, LocalCrate, ProvidedItemRequest};
 pub mod on_disk_cache;
 #[macro_use]
 pub mod plumbing;
@@ -308,10 +308,23 @@ rustc_queries! {
     /// Resolves the provided item path to the underlying item.
     query resolved_provided_item(key: DefId) -> Option<DefId> {
         desc { |tcx|
-            "building provided item `{path}`",
+            "resolving provided item `{path}`",
             path = tcx.def_path_str(key),
         }
         cache_on_disk_if { key.is_local() }
+        separate_provide_extern
+    }
+
+    query create_or_fetch_provided_item(
+      key: ProvidedItemRequest<'tcx>
+    ) -> Option<DefId> {
+        desc {
+          "building provided item `{symbol}<{tys}>`",
+          symbol = key.provider_id,
+          tys = &*key.generic_args,
+        }
+        cycle_delay_bug
+        cache_on_disk_if { false }
         separate_provide_extern
     }
 

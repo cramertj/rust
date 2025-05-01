@@ -505,6 +505,7 @@ impl<'tcx> AdtDef<'tcx> {
             | Res::Def(DefKind::Union, _)
             | Res::Def(DefKind::TyAlias, _)
             | Res::Def(DefKind::AssocTy, _)
+            | Res::Def(DefKind::ProvidedTy, _)
             | Res::SelfTyParam { .. }
             | Res::SelfTyAlias { .. }
             | Res::SelfCtor(..) => self.non_enum_variant(),

@@ -1703,7 +1703,11 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                 _ => bug!("unexpected type: {:?}", ty.normalized),
             },
             Res::Def(
-                DefKind::Struct | DefKind::Union | DefKind::TyAlias { .. } | DefKind::AssocTy,
+                DefKind::Struct
+                | DefKind::Union
+                | DefKind::TyAlias { .. }
+                | DefKind::AssocTy
+                | DefKind::ProvidedTy,
                 _,
             )
             | Res::SelfTyParam { .. }
