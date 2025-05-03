@@ -11,6 +11,8 @@ extern crate rustc_session;
 extern crate rustc_span;
 extern crate rustc_trait_selection;
 
+use std::process::ExitCode;
+
 use rustc_ast::Crate;
 use rustc_driver::{Compilation, catch_fatal_errors, run_compiler};
 use rustc_hir::def::{DefKind, Res};
@@ -71,7 +73,10 @@ fn normalize_generic_args<'tcx>(
 }
 
 fn resolve_provided_item<'tcx>(tcx: TyCtxt<'tcx>, def_id: LocalDefId) -> Option<DefId> {
-    let (provider_def_id, _hir_generic_args, _remaining_path) =
+    let span = tcx.def_span(def_id);
+    let dcx = tcx.dcx();
+
+    let (provider_def_id, _hir_generic_args, remaining_path) =
         tcx.hir_node_by_def_id(def_id).expect_item().expect_provided_ty();
 
     let hir::ItemKind::TyProvider { provider_id, ident: _ } =
@@ -82,11 +87,19 @@ fn resolve_provided_item<'tcx>(tcx: TyCtxt<'tcx>, def_id: LocalDefId) -> Option<
 
     let generic_args = tcx.provided_item_args(def_id);
     let normalized_args = normalize_generic_args(tcx, def_id, generic_args);
-    tcx.create_or_fetch_provided_item(ProvidedItemRequest {
+    let Some(provided_def_id) = tcx.create_or_fetch_provided_item(ProvidedItemRequest {
         usage_id: def_id.into(),
         provider_id,
         generic_args: normalized_args,
-    })
+    }) else {
+        dcx.span_err(span, "Missing provided item");
+        return None;
+    };
+
+    if remaining_path.is_empty() {
+        return Some(provided_def_id);
+    }
+    None
 }
 
 fn create_provided_item<'tcx>(
@@ -285,19 +298,15 @@ impl rustc_driver::Callbacks for EcdysisCallbacks {
     }
 }
 
-fn main() {
+fn main() -> ExitCode {
     let rustc_args: Vec<String> = std::env::args().collect();
     let mut driver_callbacks = EcdysisCallbacks {};
 
     // The Rust compiler unwinds with a special sentinel value to abort compilation on
     // fatal errors. We use `catch_fatal_errors` to 1) catch such panics and
     // translate them into a Result, and 2) resume and propagate other panics.
-    let catch_fatal_errors_result: Result<(), FatalError> =
-        catch_fatal_errors(|| run_compiler(&*rustc_args, &mut driver_callbacks));
-
-    match catch_fatal_errors_result {
-        Ok(()) => {}
-        // We can ignore the `Err` payloads because the error types have only one value.
-        _ => panic!("Errors reported by Rust compiler."),
-    };
+    match catch_fatal_errors(|| run_compiler(&*rustc_args, &mut driver_callbacks)) {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(FatalError) => ExitCode::FAILURE,
+    }
 }

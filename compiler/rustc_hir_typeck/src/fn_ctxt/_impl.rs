@@ -27,9 +27,9 @@ use rustc_middle::ty::{
 };
 use rustc_middle::{bug, span_bug};
 use rustc_session::lint;
-use rustc_span::Span;
 use rustc_span::def_id::LocalDefId;
 use rustc_span::hygiene::DesugaringKind;
+use rustc_span::{Ident, Span, Symbol};
 use rustc_trait_selection::error_reporting::infer::need_type_info::TypeAnnotationNeeded;
 use rustc_trait_selection::traits::{
     self, NormalizeExt, ObligationCauseCode, StructurallyNormalizeExt,
@@ -781,11 +781,48 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
     ) -> (Res, Option<LoweredTy<'tcx>>, &'tcx [hir::PathSegment<'tcx>]) {
         let (ty, qself, item_segment) = match *qpath {
             QPath::Resolved(ref opt_qself, path) => {
-                return (
-                    path.res,
-                    opt_qself.as_ref().map(|qself| self.lower_ty(qself)),
-                    path.segments,
-                );
+                if let hir::Path {
+                    span,
+                    res: Res::Def(DefKind::ProvidedTy, provided_ty_def_id),
+                    segments,
+                } = *path
+                {
+                    assert!(opt_qself.is_none());
+                    assert!(segments.is_empty());
+                    let Some(resolved_provided_def_id) =
+                        self.tcx.resolved_provided_item(provided_ty_def_id)
+                    else {
+                        self.tcx.dcx().span_err(span, "Unable to resolve provided item");
+                        return (Res::Err, None, &[]);
+                    };
+                    let res = Res::Def(
+                        self.tcx.def_kind(resolved_provided_def_id),
+                        resolved_provided_def_id,
+                    );
+                    // FIXME(ecdysis): We may need to return the proper individual path segments rather than simply returning
+                    // one segment referring to the whole provided item corresponding to the resolved item.
+                    return (
+                        res,
+                        None,
+                        self.tcx.hir_arena.alloc([hir::PathSegment {
+                            // note: `format` to avoid the warning about `intern(<literal>)`
+                            ident: Ident::new(
+                                Symbol::intern(&format!("<provided type path>")),
+                                span,
+                            ),
+                            hir_id: HirId::INVALID,
+                            res,
+                            args: None,
+                            infer_args: false,
+                        }]),
+                    );
+                } else {
+                    return (
+                        path.res,
+                        opt_qself.as_ref().map(|qself| self.lower_ty(qself)),
+                        path.segments,
+                    );
+                }
             }
             QPath::TypeRelative(ref qself, ref segment) => {
                 // Don't use `self.lower_ty`, since this will register a WF obligation.
