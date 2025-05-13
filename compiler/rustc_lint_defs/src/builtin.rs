@@ -31,6 +31,7 @@ declare_lint_pass! {
         CONST_EVALUATABLE_UNCHECKED,
         CONST_ITEM_MUTATION,
         DEAD_CODE,
+        DEAD_PUB,
         DEPENDENCY_ON_UNIT_NEVER_TYPE_FALLBACK,
         DEPRECATED,
         DEPRECATED_IN_FUTURE,
@@ -750,6 +751,10 @@ declare_lint! {
     pub DEAD_CODE,
     Warn,
     "detect unused, unexported items"
+}
+
+declare_lint! {
+    /// The `dead_pub` lint detects unused items that are c
 }
 
 declare_lint! {

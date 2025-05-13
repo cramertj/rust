@@ -878,7 +878,7 @@ fn create_and_seed_worklist(
             | CrateType::Cdylib
             | CrateType::ProcMacro
             | CrateType::Staticlib => false,
-            CrateType::Dylib | CrateType::Rlib => true,
+            CrateType::Sdylib | CrateType::Dylib | CrateType::Rlib => true,
         });
 
     let entrypoints = tcx
